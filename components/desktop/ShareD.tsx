@@ -1,0 +1,139 @@
+'use client';
+
+import { useState } from 'react';
+import type { Dish } from '@/lib/dishes';
+
+type Props = {
+  dish: Dish;
+  senderDisplay: string;
+  recipientDisplay: string;
+  link: string;
+  onBack: () => void;
+  onPreview: () => void;
+};
+
+export default function ShareD({ dish, senderDisplay, recipientDisplay, link, onBack, onPreview }: Props) {
+  const [copied, setCopied] = useState(false);
+  const displayLink = link.replace(/^https?:\/\//, '');
+  const shareText = `Ado! I sent you ${dish.name} ${dish.emoji} (kind of) → ${link}`;
+
+  const copyLink = () => {
+    try {
+      navigator.clipboard.writeText(link);
+    } catch {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+
+  const shareWhatsApp = () => {
+    if (navigator.share) {
+      navigator.share({ text: shareText }).catch(() => {});
+      return;
+    }
+    try {
+      window.open('https://wa.me/?text=' + encodeURIComponent(shareText), '_blank');
+    } catch {}
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#fdf6ea',
+        animation: 'fadeUp .35s ease',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '40px 24px 60px',
+      }}
+    >
+      <div style={{ width: '100%', maxWidth: 620 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 26 }}>
+          <div onClick={onBack} className="press back-btn" style={{ width: 46, height: 46, borderRadius: 14, fontSize: 22, flex: 'none' }}>
+            ‹
+          </div>
+          <div className="fredoka" style={{ fontWeight: 700, fontSize: 34, color: '#372a54' }}>
+            Drone&apos;s warming up
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={{ background: '#fff', border: '2.5px solid #372a54', borderRadius: 22, boxShadow: '0 5px 0 #372a54', overflow: 'hidden' }}>
+            <div
+              style={{
+                background: 'linear-gradient(#8ed0f7,#ffedc2)',
+                padding: 30,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 16,
+                borderBottom: '2.5px solid #372a54',
+              }}
+            >
+              <span style={{ fontSize: 48, animation: 'bobD 3s ease-in-out infinite' }}>🚁</span>
+              <span style={{ fontSize: 42 }}>{dish.emoji}</span>
+            </div>
+            <div style={{ padding: '18px 22px' }}>
+              <div className="fredoka" style={{ fontWeight: 600, fontSize: 18, color: '#372a54' }}>
+                {senderDisplay} sent you {dish.name} 🛸
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#8a7ba8', marginTop: 4 }}>
+                Tap to watch the drone fly over Colombo · kade air
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                border: '2.5px dashed #b3a8c9',
+                borderRadius: 14,
+                padding: '14px 16px',
+                fontFamily: 'monospace',
+                fontSize: 15,
+                fontWeight: 700,
+                color: '#6d5f8e',
+                background: '#fff',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {displayLink}
+            </div>
+            <div
+              onClick={copyLink}
+              className="press fredoka"
+              style={{
+                border: '2.5px solid #372a54',
+                borderRadius: 14,
+                padding: '14px 20px',
+                background: copied ? '#c8f0d8' : '#ffd166',
+                fontWeight: 600,
+                fontSize: 15,
+                color: '#372a54',
+                whiteSpace: 'nowrap',
+                ['--lift' as string]: '3px',
+                ['--drop' as string]: '3px',
+                ['--rest' as string]: '0',
+              }}
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </div>
+          </div>
+          <div onClick={shareWhatsApp} className="press cta" style={{ background: '#2fae60', fontSize: 20, padding: 17 }}>
+            Share on WhatsApp
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 2 }}>
+            <div style={{ flex: 1, height: 2, background: '#e8ddf0' }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#a394c2', textTransform: 'uppercase', letterSpacing: '.1em' }}>or</span>
+            <div style={{ flex: 1, height: 2, background: '#e8ddf0' }} />
+          </div>
+          <div onClick={onPreview} className="press cta" style={{ background: '#fff', color: '#372a54', fontSize: 19, padding: 17 }}>
+            Preview what {recipientDisplay} sees →
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

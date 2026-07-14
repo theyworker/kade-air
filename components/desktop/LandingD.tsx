@@ -1,0 +1,132 @@
+export default function LandingD({ onStart }: { onStart: () => void }) {
+  return (
+    <div
+      style={{
+        height: '100vh',
+        display: 'grid',
+        gridTemplateColumns: 'minmax(460px,44%) 1fr',
+        overflow: 'hidden',
+        animation: 'fadeUp .4s ease',
+      }}
+    >
+      {/* left: copy */}
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0, padding: '56px 64px', background: '#fdf6ea', position: 'relative', zIndex: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 34 }}>
+          <div
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: 16,
+              background: '#ff7a2f',
+              border: '3px solid #372a54',
+              boxShadow: '0 5px 0 #372a54',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 30,
+            }}
+          >
+            🚁
+          </div>
+          <div>
+            <div className="fredoka" style={{ fontWeight: 700, fontSize: 30, color: '#372a54', lineHeight: 1, letterSpacing: -0.5 }}>
+              KADE AIR
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#8a7ba8', letterSpacing: '.14em', textTransform: 'uppercase' }}>
+              drone-ish deliveries
+            </div>
+          </div>
+        </div>
+        <h1
+          className="fredoka"
+          style={{
+            margin: 0,
+            fontWeight: 700,
+            fontSize: 'clamp(46px,4.6vw,72px)',
+            lineHeight: 1.02,
+            color: '#372a54',
+            letterSpacing: -1.5,
+            textWrap: 'balance',
+          }}
+        >
+          Send your machan some food.
+        </h1>
+        <p style={{ margin: '20px 0 0', fontSize: 19, fontWeight: 700, color: '#6d5f8e' }}>100% fake · 100% free · 0% calories</p>
+        <div style={{ display: 'flex', gap: 14, margin: '26px 0 34px' }}>
+          {['🥘', '🍳', '🍮', '🍕', '🧋'].map((e, i) => (
+            <div key={e} style={{ fontSize: 32, animation: `bobD 3s ${i * 0.4}s ease-in-out infinite` }}>
+              {e}
+            </div>
+          ))}
+        </div>
+        <div
+          onClick={onStart}
+          className="press cta"
+          style={{ alignSelf: 'flex-start', background: '#ff7a2f', fontSize: 24, padding: '18px 42px' }}
+        >
+          Ado, send food →
+        </div>
+        <p style={{ margin: '20px 0 0', fontSize: 13, fontWeight: 600, color: '#a394c2', fontStyle: 'italic' }}>
+          nothing arrives. that&apos;s the whole point.
+        </p>
+      </div>
+
+      {/* right: sky panel */}
+      <div
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          background: 'linear-gradient(#8ed0f7 0%, #c8e9fb 52%, #ffedc2 78%, #ffd98f 100%)',
+          borderLeft: '3px solid #372a54',
+        }}
+      >
+        <div style={{ position: 'absolute', top: '9%', right: '12%', width: 150, height: 150, pointerEvents: 'none' }}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: -36,
+              borderRadius: '50%',
+              background: 'repeating-conic-gradient(rgba(255,209,102,.55) 0 9deg, transparent 9deg 30deg)',
+              animation: 'sunSpin 24s linear infinite',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 18,
+              borderRadius: '50%',
+              background: 'radial-gradient(circle at 38% 34%, #ffe59a, #ffc94d)',
+              border: '3px solid #372a54',
+              boxShadow: '0 0 50px rgba(255,201,77,.8)',
+            }}
+          />
+        </div>
+        <div style={{ position: 'absolute', top: '16%', left: '8%', width: 120, height: 34, background: '#fff', borderRadius: 24, border: '3px solid #372a54', animation: 'driftD 9s ease-in-out infinite alternate' }} />
+        <div style={{ position: 'absolute', top: '34%', left: '30%', width: 84, height: 26, background: '#fff', borderRadius: 24, border: '3px solid #372a54', opacity: 0.9, animation: 'driftD 12s ease-in-out infinite alternate-reverse' }} />
+        <div style={{ position: 'absolute', top: '52%', right: '8%', width: 96, height: 28, background: '#fff', borderRadius: 24, border: '3px solid #372a54', opacity: 0.95, animation: 'driftD 13s ease-in-out infinite alternate' }} />
+        <div style={{ position: 'absolute', top: '12%', left: '44%', animation: 'floaty 4.5s ease-in-out infinite' }}>
+          <div style={{ width: 20, height: 20, background: '#ff6f9c', border: '3px solid #372a54', borderRadius: 4 }} />
+        </div>
+        {/* hero drone */}
+        <div style={{ position: 'absolute', top: '38%', left: '50%', transform: 'translateX(-50%)', animation: 'bobD 3.4s ease-in-out infinite' }}>
+          <div style={{ position: 'relative', width: 190, height: 52 }}>
+            <div style={{ position: 'absolute', top: 22, left: 0, width: 190, height: 9, background: '#372a54', borderRadius: 5 }} />
+            <div style={{ position: 'absolute', top: 14, left: -16, width: 72, height: 18, borderRadius: '50%', background: 'rgba(55,42,84,.75)', animation: 'prop .16s linear infinite' }} />
+            <div style={{ position: 'absolute', top: 14, right: -16, width: 72, height: 18, borderRadius: '50%', background: 'rgba(55,42,84,.75)', animation: 'prop .16s .05s linear infinite' }} />
+            <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', width: 98, height: 44, background: '#ff7a2f', border: '3.5px solid #372a54', borderRadius: 24 }} />
+            <div style={{ position: 'absolute', top: 27, left: '50%', transform: 'translateX(-50%)', width: 32, height: 18, background: '#cdeafc', border: '2.5px solid #372a54', borderRadius: 7 }} />
+            <div style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', width: 12, height: 12, borderRadius: '50%', background: '#ff3b3b', animation: 'blink 1s steps(1) infinite' }} />
+          </div>
+          <div style={{ position: 'absolute', top: 56, left: '50%', transformOrigin: 'top center', animation: 'sway 2.2s ease-in-out infinite' }}>
+            <div style={{ width: 4, height: 46, background: '#372a54', marginLeft: -2 }} />
+            <div style={{ position: 'relative', width: 62, height: 50, marginLeft: -31, background: '#d9915a', border: '3.5px solid #372a54', borderRadius: 9 }}>
+              <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 12, height: '100%', background: '#ffc94d' }} />
+            </div>
+          </div>
+        </div>
+        {/* ground strip */}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '12%', background: 'linear-gradient(#8ccb62,#6fb54a)', borderTop: '3px solid #372a54' }} />
+      </div>
+    </div>
+  );
+}
