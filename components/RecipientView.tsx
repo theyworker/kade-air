@@ -45,6 +45,7 @@ export default function RecipientView({ order, initialDesktop = false }: Props) 
         key={trackKey}
         dish={dish}
         senderDisplay={senderDisplay(order)}
+        recipientDisplay={recipientDisplay(order)}
         msgDisplay={messageDisplay(order)}
         onLoop={() => setScreen('loop')}
       />

@@ -104,6 +104,7 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
           key={trackKey}
           dish={dish}
           senderDisplay={senderDisplay(order)}
+          recipientDisplay={recipientDisplay(order)}
           msgDisplay={messageDisplay(order)}
           onExit={() => setScreen('share')}
           onLoop={() => setScreen('loop')}
