@@ -252,7 +252,7 @@ export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msg
               borderTopLeftRadius: 28,
               borderTopRightRadius: 28,
               boxShadow: '0 -6px 0 #372a54',
-              padding: '22px 22px 20px',
+              padding: '22px 22px calc(20px + env(safe-area-inset-bottom))',
             }}
           >
             <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', color: '#8a7ba8' }}>
