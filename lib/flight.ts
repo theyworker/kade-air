@@ -20,7 +20,9 @@ export type Durations = {
 
 export function durations(fastMode = false): Durations {
   const m = fastMode ? 0.4 : 1;
-  return { acc: 1400 * m, prep: 4200 * m, disp: 2600 * m, fly: 5200 * m, arr: 2200 * m, exit: 2000 };
+  // ~15s in the kitchen (acc + prep + disp), then a slow ~13s flight
+  // (fly + arr), for ~28s total from order to doorstep.
+  return { acc: 2000 * m, prep: 9000 * m, disp: 4000 * m, fly: 9000 * m, arr: 4000 * m, exit: 2000 };
 }
 
 export function phaseAt(el: number, D: Durations): Phase {
