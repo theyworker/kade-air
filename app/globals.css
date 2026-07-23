@@ -32,6 +32,8 @@ input::placeholder, textarea::placeholder { color: #b3a8c9; }
 @keyframes lidJig { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-3px) rotate(2deg); } 75% { transform: translateY(-2px) rotate(-2deg); } }
 @keyframes handoff { from { transform: translate(0, 0); } to { transform: translate(133px, -36px); } }
 @keyframes pulseDot { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+/* slow, one-directional push into the food while the note is being read */
+@keyframes slowZoom { from { transform: scale(1); } to { transform: scale(1.6); } }
 
 /* desktop-scene variants (bigger travel distances, per the desktop design) */
 @keyframes bobD { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }

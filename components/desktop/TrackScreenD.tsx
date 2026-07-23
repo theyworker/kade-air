@@ -9,6 +9,7 @@ import SkylineD from './SkylineD';
 type Props = {
   dish: Dish;
   senderDisplay: string;
+  recipientDisplay: string;
   msgDisplay: string;
   onExit?: () => void;
   onLoop: () => void;
@@ -18,7 +19,7 @@ type Props = {
 
 const STEP_LABELS = ['Accepted', 'Preparing', 'Dispatched', 'Delivered'];
 
-export default function TrackScreenD({ dish, senderDisplay, msgDisplay, onExit, onLoop, fastMode = false, showTuk = true }: Props) {
+export default function TrackScreenD({ dish, senderDisplay, recipientDisplay, msgDisplay, onExit, onLoop, fastMode = false, showTuk = true }: Props) {
   const d = useDelivery(fastMode, DESKTOP_GEOMETRY, true);
   const { phase, world } = d;
 
@@ -150,7 +151,7 @@ export default function TrackScreenD({ dish, senderDisplay, msgDisplay, onExit, 
 
       {/* top overlay: back / mute */}
       {onExit && (
-        <div onClick={onExit} className="press back-btn" style={{ position: 'absolute', top: 24, left: 24, zIndex: 31, width: 44, height: 44, borderRadius: 14, fontSize: 20 }}>
+        <div onClick={onExit} className="press back-btn" style={{ position: 'absolute', top: 24, left: 24, zIndex: 50, width: 44, height: 44, borderRadius: 14, fontSize: 20 }}>
           ‹
         </div>
       )}
@@ -220,60 +221,93 @@ export default function TrackScreenD({ dish, senderDisplay, msgDisplay, onExit, 
         })}
       </div>
 
-      {/* bottom overlay: status card / reveal */}
+      {/* full-screen reveal: the food slowly zooms while the note is read */}
       {d.revealed ? (
-        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', bottom: 28, zIndex: 31, width: 'min(640px,90vw)' }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 40,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            background: 'linear-gradient(#ffe9c7 0%, #ffd98f 46%, #ffb877 100%)',
+            animation: 'fadeUp .5s ease both',
+          }}
+        >
+          {/* zooming food stage */}
+          <div style={{ position: 'relative', flex: 1, minHeight: 0, width: '100%', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div
+              style={{
+                position: 'absolute',
+                width: 460,
+                height: 460,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(255,255,255,.75), rgba(255,255,255,0) 70%)',
+                animation: 'slowZoom 24s ease-out both',
+              }}
+            />
+            <div
+              style={{
+                fontSize: 220,
+                lineHeight: 1,
+                filter: 'drop-shadow(0 16px 26px rgba(55,42,84,.28))',
+                animation: 'slowZoom 24s ease-out both',
+              }}
+            >
+              {dish.emoji}
+            </div>
+            <div
+              className="fredoka"
+              style={{
+                position: 'absolute',
+                top: '13%',
+                background: '#fff',
+                border: '2.5px solid #372a54',
+                borderRadius: 999,
+                boxShadow: '0 3px 0 #372a54',
+                padding: '8px 22px',
+                fontWeight: 700,
+                fontSize: 20,
+                color: '#372a54',
+              }}
+            >
+              {dish.name} · delivered!
+            </div>
+          </div>
+
+          {/* the note */}
           <div
             style={{
+              width: 'min(560px,90vw)',
+              marginBottom: 'clamp(20px,5vh,60px)',
               background: '#fff',
               border: '3px solid #372a54',
               borderRadius: 26,
               boxShadow: '0 6px 0 #372a54',
               padding: '24px 26px 22px',
-              animation: 'popIn .55s cubic-bezier(.2,1.4,.5,1) both',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: '50%',
-                  background: dish.c,
-                  border: '2.5px solid #372a54',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 33,
-                  flex: 'none',
-                }}
-              >
-                {dish.emoji}
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <div className="fredoka" style={{ fontWeight: 700, fontSize: 24, color: '#372a54', lineHeight: 1.1 }}>
-                  {dish.name} — delivered!
-                </div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#8a7ba8', marginTop: 3 }}>
-                  from {senderDisplay} · well… sort of delivered
-                </div>
-              </div>
+            <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', color: '#8a7ba8' }}>
+              For {recipientDisplay}
             </div>
             <div
               style={{
-                marginTop: 16,
+                marginTop: 12,
                 background: '#fdf6ea',
                 border: '2px dashed #b3a8c9',
                 borderRadius: 14,
-                padding: '13px 16px',
-                fontSize: 16,
+                padding: '15px 18px',
+                fontSize: 18,
                 fontWeight: 700,
                 color: '#372a54',
                 fontStyle: 'italic',
+                lineHeight: 1.4,
               }}
             >
               “{msgDisplay}”
             </div>
+            <div style={{ marginTop: 10, fontSize: 14, fontWeight: 700, color: '#8a7ba8', textAlign: 'right' }}>— {senderDisplay}</div>
             <div onClick={onLoop} className="press cta" style={{ marginTop: 16, background: '#ff7a2f', borderRadius: 16, fontSize: 18, padding: 15, ['--lift' as string]: '5px', ['--drop' as string]: '4px' }}>
               Nice. What now? →
             </div>
