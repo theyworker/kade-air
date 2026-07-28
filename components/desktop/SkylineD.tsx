@@ -1,15 +1,17 @@
+import DishIcon from '@/components/DishIcon';
 import Parcel from '@/components/track/Parcel';
 
 type Props = {
   padActive: boolean;
   landed: boolean;
-  dishEmoji: string;
+  dishIcon: string;
+  dishName: string;
   showTuk: boolean;
 };
 
 // Colombo skyline at desktop scale — landmarks are the mobile art scaled
 // 2x via transforms, spread across viewports 2-3 of the world.
-export default function SkylineD({ padActive, landed, dishEmoji, showTuk }: Props) {
+export default function SkylineD({ padActive, landed, dishIcon, dishName, showTuk }: Props) {
   return (
     <div style={{ position: 'absolute', left: '33.333%', top: 0, bottom: 0, width: '66.667%', zIndex: 2 }}>
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: '35%', height: '34%', background: 'linear-gradient(transparent, rgba(255,255,255,.75))' }} />
@@ -329,9 +331,12 @@ export default function SkylineD({ padActive, landed, dishEmoji, showTuk }: Prop
           {landed && (
             <div style={{ position: 'absolute', bottom: -8, left: '50%', transform: 'translateX(-50%)', animation: 'popIn .5s ease both' }}>
               <Parcel />
-              <div style={{ position: 'absolute', top: -30, left: '50%', transform: 'translateX(-50%)', fontSize: 26, animation: 'bobD 2.4s ease-in-out infinite' }}>
-                {dishEmoji}
-              </div>
+              <DishIcon
+                src={dishIcon}
+                alt={dishName}
+                size={40}
+                style={{ position: 'absolute', top: -30, left: '50%', transform: 'translateX(-50%)', animation: 'bobD 2.4s ease-in-out infinite' }}
+              />
             </div>
           )}
         </div>

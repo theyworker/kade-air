@@ -1,5 +1,6 @@
 'use client';
 
+import { preload } from 'react-dom';
 import type { Dish } from '@/lib/dishes';
 import { STATUS_TEXT } from '@/lib/flight';
 import { useDelivery } from '@/lib/useDelivery';
@@ -23,6 +24,9 @@ const STEP_LABELS = ['Accepted', 'Preparing', 'Dispatched', 'Delivered'];
 export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msgDisplay, onExit, onLoop, fastMode = false, showTuk = true }: Props) {
   const d = useDelivery(fastMode);
   const { phase, world } = d;
+
+  // The reveal is a 1254px PNG — fetch it while the drone is still flying.
+  preload(dish.high, { as: 'image' });
 
   return (
     <div style={{ position: 'relative', height: '100%', overflow: 'hidden', background: '#8ed0f7' }}>
@@ -68,8 +72,6 @@ export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msg
         </div>
 
         <Kitchen
-          dishName={dish.name}
-          dishEmoji={dish.emoji}
           ticketStamped={d.ticketStamped}
           kitchenBusy={d.kitchenBusy}
           chefHanding={phase === 'dispatched'}
@@ -77,7 +79,7 @@ export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msg
           handoffDur={d.handoffDur}
         />
 
-        <Skyline padActive={phase === 'arriving'} landed={phase === 'delivered'} dishEmoji={dish.emoji} showTuk={showTuk} />
+        <Skyline padActive={phase === 'arriving'} landed={phase === 'delivered'} dishIcon={dish.low} dishName={dish.name} showTuk={showTuk} />
 
         {/* drone shadow */}
         {d.shadowVisible && (
@@ -197,87 +199,51 @@ export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msg
             position: 'absolute',
             inset: 0,
             zIndex: 40,
+            background: '#fdf6ea',
             display: 'flex',
             flexDirection: 'column',
-            background: 'linear-gradient(#ffe9c7 0%, #ffd98f 46%, #ffb877 100%)',
-            animation: 'fadeUp .5s ease both',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '78px 22px calc(24px + env(safe-area-inset-bottom))',
+            textAlign: 'center',
+            animation: 'popIn .55s cubic-bezier(.2,1.4,.5,1) both',
           }}
         >
-          {/* zooming food stage */}
-          <div style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div
-              style={{
-                position: 'absolute',
-                width: 260,
-                height: 260,
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(255,255,255,.75), rgba(255,255,255,0) 70%)',
-                animation: 'slowZoom 24s ease-out both',
-              }}
-            />
-            <div
-              style={{
-                fontSize: 132,
-                lineHeight: 1,
-                filter: 'drop-shadow(0 12px 18px rgba(55,42,84,.28))',
-                animation: 'slowZoom 24s ease-out both',
-              }}
-            >
-              {dish.emoji}
-            </div>
-            <div
-              className="fredoka"
-              style={{
-                position: 'absolute',
-                top: 78,
-                background: '#fff',
-                border: '2.5px solid #372a54',
-                borderRadius: 999,
-                boxShadow: '0 3px 0 #372a54',
-                padding: '6px 16px',
-                fontWeight: 700,
-                fontSize: 15,
-                color: '#372a54',
-              }}
-            >
-              {dish.name} · delivered!
-            </div>
-          </div>
-
-          {/* the note */}
           <div
             style={{
-              background: '#fff',
-              borderTop: '3px solid #372a54',
-              borderTopLeftRadius: 28,
-              borderTopRightRadius: 28,
-              boxShadow: '0 -6px 0 #372a54',
-              padding: '22px 22px calc(20px + env(safe-area-inset-bottom))',
+              width: 'min(58vw,240px)',
+              aspectRatio: '1',
+              borderRadius: '50%',
+              background: dish.c,
+              border: '4px solid #372a54',
+              boxShadow: '0 8px 0 #372a54',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flex: 'none',
+              overflow: 'hidden',
+              padding: 16,
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', color: '#8a7ba8' }}>
-              For {recipientDisplay}
-            </div>
-            <div
-              style={{
-                marginTop: 10,
-                background: '#fdf6ea',
-                border: '2px dashed #b3a8c9',
-                borderRadius: 14,
-                padding: '14px 16px',
-                fontSize: 16,
-                fontWeight: 700,
-                color: '#372a54',
-                fontStyle: 'italic',
-                lineHeight: 1.4,
-              }}
-            >
-              “{msgDisplay}”
-            </div>
-            <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: '#8a7ba8', textAlign: 'right' }}>— {senderDisplay}</div>
-            <div onClick={onLoop} className="press cta" style={{ marginTop: 14, background: '#ff7a2f', borderRadius: 16, fontSize: 17, padding: 14, ['--lift' as string]: '5px', ['--drop' as string]: '4px' }}>
-              Nice. What now? →
-            </div>
+            <img
+              src={dish.high}
+              alt={dish.name}
+              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', filter: 'drop-shadow(0 6px 8px rgba(55,42,84,.18))' }}
+            />
+          </div>
+          <div className="fredoka" style={{ fontWeight: 600, fontSize: 19, color: '#6d5f8e', lineHeight: 1.15, marginTop: 20 }}>
+            {dish.name} — delivered!
+          </div>
+          <div className="fredoka" style={{ marginTop: 18, fontWeight: 700, fontSize: 38, lineHeight: 1.12, letterSpacing: '-.8px', color: '#372a54', textWrap: 'pretty', maxWidth: 360 }}>
+            “{msgDisplay}”
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#8a7ba8', letterSpacing: '.02em', marginTop: 12 }}>— from {senderDisplay}</div>
+          <div
+            onClick={onLoop}
+            className="press cta"
+            style={{ marginTop: 'auto', alignSelf: 'stretch', background: '#ff7a2f', borderRadius: 16, fontSize: 17, padding: 14, ['--lift' as string]: '5px', ['--drop' as string]: '4px' }}
+          >
+            Nice. What now? →
           </div>
         </div>
       ) : (
