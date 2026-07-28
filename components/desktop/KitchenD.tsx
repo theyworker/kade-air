@@ -1,6 +1,4 @@
 type Props = {
-  dishName: string;
-  dishEmoji: string;
   ticketStamped: boolean;
   kitchenBusy: boolean;
   chefHanding: boolean;
@@ -10,7 +8,7 @@ type Props = {
 
 // The kadé kitchen at desktop scale — props sizes match the mobile art,
 // scaled up via transforms exactly as in the desktop design.
-export default function KitchenD({ dishName, dishEmoji, ticketStamped, kitchenBusy, chefHanding, handoffActive, handoffDur }: Props) {
+export default function KitchenD({ ticketStamped, kitchenBusy, chefHanding, handoffActive, handoffDur }: Props) {
   return (
     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '33.333%', zIndex: 2 }}>
       <div
@@ -63,8 +61,9 @@ export default function KitchenD({ dishName, dishEmoji, ticketStamped, kitchenBu
           <div style={{ position: 'relative', width: 150, background: '#fff', border: '2.5px solid #372a54', borderRadius: 10, boxShadow: '0 3px 0 #372a54', padding: '9px 11px' }}>
             <div style={{ fontFamily: 'monospace', fontSize: 10, fontWeight: 700, color: '#8a7ba8', letterSpacing: '.08em' }}>ORDER #8FQ2</div>
             <div className="fredoka" style={{ fontWeight: 600, fontSize: 13, color: '#372a54', marginTop: 2 }}>
-              1× {dishName} {dishEmoji}
+              1× SURPRISE 🎁
             </div>
+            <div style={{ fontFamily: 'monospace', fontSize: 9.5, fontWeight: 700, color: '#a394c2', letterSpacing: '.06em', marginTop: 1 }}>CONTENTS SEALED</div>
             {ticketStamped && (
               <div
                 className="fredoka"

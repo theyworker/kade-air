@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Dish } from '@/lib/dishes';
+import DishIcon from '../DishIcon';
 
 type Props = {
   dish: Dish;
@@ -59,7 +60,7 @@ export default function Share({ dish, senderDisplay, recipientDisplay, link, onB
             }}
           >
             <span style={{ fontSize: 38, animation: 'bob 3s ease-in-out infinite' }}>🚁</span>
-            <span style={{ fontSize: 34 }}>{dish.emoji}</span>
+            <DishIcon src={dish.low} alt={dish.name} size={52} />
           </div>
           <div style={{ padding: '14px 16px' }}>
             <div className="fredoka" style={{ fontWeight: 600, fontSize: 15, color: '#372a54' }}>

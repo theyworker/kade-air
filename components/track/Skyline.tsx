@@ -1,14 +1,16 @@
+import DishIcon from '../DishIcon';
 import Parcel from './Parcel';
 
 type Props = {
   padActive: boolean;
   landed: boolean;
-  dishEmoji: string;
+  dishIcon: string;
+  dishName: string;
   showTuk: boolean;
 };
 
 // Colombo skyline + Galle Face green + ocean — right two-thirds of the world.
-export default function Skyline({ padActive, landed, dishEmoji, showTuk }: Props) {
+export default function Skyline({ padActive, landed, dishIcon, dishName, showTuk }: Props) {
   return (
     <div style={{ position: 'absolute', left: '33.333%', top: 0, bottom: 0, width: '66.667%', zIndex: 2 }}>
       {/* horizon haze */}
@@ -325,9 +327,12 @@ export default function Skyline({ padActive, landed, dishEmoji, showTuk }: Props
           {landed && (
             <div style={{ position: 'absolute', bottom: -8, left: '50%', transform: 'translateX(-50%)', animation: 'popIn .5s ease both' }}>
               <Parcel />
-              <div style={{ position: 'absolute', top: -30, left: '50%', transform: 'translateX(-50%)', fontSize: 26, animation: 'bob 2.4s ease-in-out infinite' }}>
-                {dishEmoji}
-              </div>
+              <DishIcon
+                src={dishIcon}
+                alt={dishName}
+                size={40}
+                style={{ position: 'absolute', top: -30, left: '50%', transform: 'translateX(-50%)', animation: 'bob 2.4s ease-in-out infinite' }}
+              />
             </div>
           )}
         </div>

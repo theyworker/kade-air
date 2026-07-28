@@ -1,4 +1,5 @@
 import type { Dish } from '@/lib/dishes';
+import DishIcon from '../DishIcon';
 
 type Props = {
   dish: Dish;
@@ -36,7 +37,7 @@ export default function Loop({ dish, senderDisplay, recipientDisplay, chainNumbe
           animation: 'popIn .5s ease both',
         }}
       >
-        <div style={{ fontSize: 52, animation: 'bob 3s ease-in-out infinite' }}>{dish.emoji}</div>
+        <DishIcon src={dish.low} alt={dish.name} size={96} style={{ margin: '0 auto', animation: 'bob 3s ease-in-out infinite' }} />
         <div className="fredoka" style={{ marginTop: 10, fontWeight: 700, fontSize: 30, color: '#372a54', lineHeight: 1.05 }}>
           FED!
           <br />

@@ -1,4 +1,5 @@
 import type { Dish } from '@/lib/dishes';
+import DishIcon from '../DishIcon';
 import { MAX_MESSAGE, MAX_NAME } from '@/lib/order';
 
 const SUGGESTIONS = [
@@ -43,7 +44,7 @@ export default function Personalise({ dish, sender, recipient, message, onSender
             boxShadow: '0 4px 0 #372a54',
           }}
         >
-          <span style={{ fontSize: 30 }}>{dish.emoji}</span>
+          <DishIcon src={dish.low} alt={dish.name} size={44} />
           <div>
             <div className="fredoka" style={{ fontWeight: 600, fontSize: 16, color: '#372a54' }}>
               {dish.name}

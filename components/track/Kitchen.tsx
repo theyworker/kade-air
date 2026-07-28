@@ -1,8 +1,6 @@
 import Parcel from './Parcel';
 
 type Props = {
-  dishName: string;
-  dishEmoji: string;
   ticketStamped: boolean;
   kitchenBusy: boolean;
   chefHanding: boolean;
@@ -10,8 +8,9 @@ type Props = {
   handoffDur: number;
 };
 
-// The kadé kitchen — left third of the scrolling world.
-export default function Kitchen({ dishName, dishEmoji, ticketStamped, kitchenBusy, chefHanding, handoffActive, handoffDur }: Props) {
+// The kadé kitchen — left third of the scrolling world. The ticket keeps the
+// dish sealed; it is only revealed once the drone lands.
+export default function Kitchen({ ticketStamped, kitchenBusy, chefHanding, handoffActive, handoffDur }: Props) {
   return (
     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '33.333%', zIndex: 2 }}>
       {/* roof strip */}
@@ -78,8 +77,9 @@ export default function Kitchen({ dishName, dishEmoji, ticketStamped, kitchenBus
         >
           <div style={{ fontFamily: 'monospace', fontSize: 10, fontWeight: 700, color: '#8a7ba8', letterSpacing: '.08em' }}>ORDER #8FQ2</div>
           <div className="fredoka" style={{ fontWeight: 600, fontSize: 13, color: '#372a54', marginTop: 2 }}>
-            1× {dishName} {dishEmoji}
+            1× SURPRISE 🎁
           </div>
+          <div style={{ fontFamily: 'monospace', fontSize: 9.5, fontWeight: 700, color: '#a394c2', letterSpacing: '.06em', marginTop: 1 }}>CONTENTS SEALED</div>
           {ticketStamped && (
             <div
               className="fredoka"

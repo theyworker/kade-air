@@ -1,4 +1,5 @@
 import { DISHES } from '@/lib/dishes';
+import DishIcon from '../DishIcon';
 
 export default function Menu({ onBack, onSelect }: { onBack: () => void; onSelect: (dishId: string) => void }) {
   return (
@@ -43,10 +44,11 @@ export default function Menu({ onBack, onSelect }: { onBack: () => void; onSelec
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 28,
+                  overflow: 'hidden',
+                  padding: 5,
                 }}
               >
-                {d.emoji}
+                <DishIcon src={d.low} alt={d.name} size="100%" />
               </div>
               <div className="fredoka" style={{ fontWeight: 600, fontSize: 16, color: '#372a54', lineHeight: 1.15 }}>
                 {d.name}
