@@ -4,6 +4,7 @@ import { preload } from 'react-dom';
 import type { Dish } from '@/lib/dishes';
 import { DESKTOP_GEOMETRY, STATUS_TEXT } from '@/lib/flight';
 import { useDelivery } from '@/lib/useDelivery';
+import { useWarmImage } from '@/lib/useWarmImage';
 import KitchenD from './KitchenD';
 import SkylineD from './SkylineD';
 
@@ -24,8 +25,13 @@ export default function TrackScreenD({ dish, senderDisplay, recipientDisplay, ms
   const d = useDelivery(fastMode, DESKTOP_GEOMETRY, true);
   const { phase, world } = d;
 
-  // The reveal is a 1254px PNG — fetch it while the drone is still flying.
+  // The reveal is a 1254px PNG. preload() starts the download as early as
+  // possible; useWarmImage also decodes it, so the final pop paints with no
+  // delay. Until it's warm we fall back to the low-res art, which is already
+  // cached from the menu — the circle is never empty.
   preload(dish.high, { as: 'image' });
+  const heroReady = useWarmImage(dish.high);
+  const heroSrc = heroReady ? dish.high : dish.low;
 
   return (
     <div style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: '#8ed0f7' }}>
@@ -257,8 +263,10 @@ export default function TrackScreenD({ dish, senderDisplay, recipientDisplay, ms
             }}
           >
             <img
-              src={dish.high}
+              src={heroSrc}
               alt={dish.name}
+              decoding="sync"
+              fetchPriority="high"
               style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', filter: 'drop-shadow(0 8px 10px rgba(55,42,84,.18))' }}
             />
           </div>
