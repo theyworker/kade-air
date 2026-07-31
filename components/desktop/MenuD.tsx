@@ -36,8 +36,8 @@ export default function MenuD({ onBack, onSelect }: { onBack: () => void; onSele
             >
               <div
                 style={{
-                  width: 62,
-                  height: 62,
+                  width: 70,
+                  height: 70,
                   borderRadius: '50%',
                   background: d.c,
                   border: '2.5px solid #372a54',
@@ -45,7 +45,7 @@ export default function MenuD({ onBack, onSelect }: { onBack: () => void; onSele
                   alignItems: 'center',
                   justifyContent: 'center',
                   overflow: 'hidden',
-                  padding: 6,
+                  padding: 9,
                 }}
               >
                 <DishIcon src={d.low} alt={d.name} size="100%" />

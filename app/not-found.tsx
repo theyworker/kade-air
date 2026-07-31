@@ -16,7 +16,6 @@ export default function NotFound() {
           Send someone food instead →
         </Link>
       }
-      footnote="kade air · nothing arrives, on purpose"
     />
   );
 }

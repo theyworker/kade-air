@@ -8,7 +8,7 @@ type Props = {
   style?: CSSProperties;
 };
 
-// The food icons are square PNGs — always fitted, never cropped.
+// The food icons are square WebPs — always fitted, never cropped.
 export default function DishIcon({ src, alt = '', size, style }: Props) {
   return (
     <div style={{ width: size, height: size, flex: 'none', ...style }}>

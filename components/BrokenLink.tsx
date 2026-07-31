@@ -12,7 +12,6 @@ export default function BrokenLink() {
           Send someone food instead →
         </Link>
       }
-      footnote="kade air · nothing arrives, on purpose"
     />
   );
 }

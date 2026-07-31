@@ -2,6 +2,8 @@
 // The token is base64url(JSON) so the server can render OG tags and the
 // OG image for any link without a lookup.
 
+import { DEFAULT_MESSAGE } from './messages';
+
 export type Order = {
   dishId: string;
   sender: string;
@@ -57,4 +59,4 @@ export function decodeOrder(token: string): Order | null {
 
 export const senderDisplay = (o: Pick<Order, 'sender'>) => o.sender.trim() || 'a secret machan';
 export const recipientDisplay = (o: Pick<Order, 'recipient'>) => o.recipient.trim() || 'your machan';
-export const messageDisplay = (o: Pick<Order, 'message'>) => o.message.trim() || 'Ado, eat something no 🙄';
+export const messageDisplay = (o: Pick<Order, 'message'>) => o.message.trim() || DEFAULT_MESSAGE;

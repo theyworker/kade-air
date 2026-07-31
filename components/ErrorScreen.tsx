@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import BrandLogo from './BrandLogo';
 import DroneMark from './DroneMark';
 
 type Props = {
@@ -36,8 +37,9 @@ export default function ErrorScreen({ headline, body, action, footnote }: Props)
         </h1>
         <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#6d5f8e', lineHeight: 1.5 }}>{body}</p>
         <div style={{ width: '100%', marginTop: 12 }}>{action}</div>
+        <BrandLogo width={132} style={{ marginTop: 10, opacity: 0.9 }} />
         {footnote && (
-          <p style={{ margin: '6px 0 0', fontSize: 11, fontWeight: 700, color: '#a394c2', letterSpacing: '.1em', textTransform: 'uppercase' }}>{footnote}</p>
+          <p style={{ margin: '2px 0 0', fontSize: 11, fontWeight: 700, color: '#a394c2', letterSpacing: '.1em', textTransform: 'uppercase' }}>{footnote}</p>
         )}
       </div>
     </div>
