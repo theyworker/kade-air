@@ -5,6 +5,7 @@ import type { Dish } from '@/lib/dishes';
 import { STATUS_TEXT } from '@/lib/flight';
 import { useDelivery } from '@/lib/useDelivery';
 import { useWarmImage } from '@/lib/useWarmImage';
+import SpeakerIcon from '../SpeakerIcon';
 import Drone from './Drone';
 import Kitchen from './Kitchen';
 import Skyline from './Skyline';
@@ -136,9 +137,10 @@ export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msg
       <div
         onClick={d.toggleMute}
         className="press back-btn"
-        style={{ position: 'absolute', top: 56, right: 14, zIndex: 31, width: 36, height: 36, fontSize: 15 }}
+        style={{ position: 'absolute', top: 56, right: 14, zIndex: 31, width: 36, height: 36 }}
+        aria-label={d.muted ? 'Unmute' : 'Mute'}
       >
-        {d.muted ? '🔇' : '🔊'}
+        <SpeakerIcon muted={d.muted} size={21} />
       </div>
 
       {/* progress stepper */}

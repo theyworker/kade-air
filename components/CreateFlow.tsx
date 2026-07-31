@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { findDish } from '@/lib/dishes';
+import { preload } from 'react-dom';
+import { MENU_ART, findDish } from '@/lib/dishes';
 import { encodeOrder, messageDisplay, recipientDisplay, senderDisplay } from '@/lib/order';
 import { useIsDesktop } from '@/lib/useIsDesktop';
+import { usePrefetchImages } from '@/lib/usePrefetchImages';
 import PhoneShell from '@/components/PhoneShell';
 import Landing from '@/components/screens/Landing';
 import Menu from '@/components/screens/Menu';
@@ -35,6 +37,15 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
   useEffect(() => setOrigin(window.location.origin), []);
 
   const dish = findDish(dishId);
+
+  // Warm the whole grid while the landing screen is still being read, so the
+  // menu paints from cache instead of loading 30 thumbnails in front of you.
+  usePrefetchImages(MENU_ART, { enabled: screen === 'home' });
+
+  // Once a dish is picked the reveal art is inevitable — start it now rather
+  // than waiting for the flight to mount and race it.
+  if (screen !== 'home' && screen !== 'menu') preload(dish.high, { as: 'image' });
+
   const order = { dishId, sender, recipient, message, chain };
   const token = useMemo(() => encodeOrder(order), [dishId, sender, recipient, message, chain]); // eslint-disable-line react-hooks/exhaustive-deps
   const link = `${origin || 'https://kade.air'}/d/${token}`;

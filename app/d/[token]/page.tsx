@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
+import { preload } from 'react-dom';
 import RecipientView from '@/components/RecipientView';
 import BrokenLink from '@/components/BrokenLink';
 import { findDish } from '@/lib/dishes';
@@ -45,5 +46,13 @@ export default async function DeliveryPage({ params }: Props) {
   const [{ token }, h] = await Promise.all([params, headers()]);
   const order = decodeOrder(decodeURIComponent(token));
   if (!order) return <BrokenLink />;
+
+  // The token already names the dish, so both renders can start downloading
+  // with the document — no waiting on hydration. The flight buys the ~153KB
+  // reveal plenty of time; the thumbnail is wanted immediately, hence high.
+  const dish = findDish(order.dishId);
+  preload(dish.low, { as: 'image', fetchPriority: 'high' });
+  preload(dish.high, { as: 'image', fetchPriority: 'low' });
+
   return <RecipientView order={order} initialDesktop={isDesktopUA(h.get('user-agent'))} />;
 }

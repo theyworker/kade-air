@@ -55,3 +55,6 @@ export function findDish(id: string): Dish {
 // The five bobbing icons on the landing screen. The design shuffles these per
 // render; here the pick is fixed so the server and client agree on the markup.
 export const floatArt: Dish[] = ['kottu', 'hoppers', 'watalappan', 'pizza', 'boba'].map(findDish);
+
+/** Every thumbnail the menu grid will ask for — ~524KB across 30 files. */
+export const MENU_ART: string[] = DISHES.map((d) => d.low);

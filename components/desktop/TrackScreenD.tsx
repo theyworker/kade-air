@@ -6,6 +6,7 @@ import type { Dish } from '@/lib/dishes';
 import { DESKTOP_GEOMETRY, STATUS_TEXT } from '@/lib/flight';
 import { useDelivery } from '@/lib/useDelivery';
 import { useWarmImage } from '@/lib/useWarmImage';
+import SpeakerIcon from '../SpeakerIcon';
 import KitchenD from './KitchenD';
 import SkylineD from './SkylineD';
 
@@ -172,12 +173,7 @@ export default function TrackScreenD({ dish, onExit, onLoop, fastMode = false, s
         style={{ position: 'absolute', top: 24, right: 24, zIndex: 31, width: 44, height: 44, borderRadius: 14 }}
         aria-label={d.muted ? 'Unmute' : 'Mute'}
       >
-        <svg viewBox="0 0 24 24" width={24} height={24} fill="none" stroke="#372a54" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 9.5h3.2L12 5.5v13L7.2 14.5H4z" fill="#ff7a2f" />
-          <path d="M16 9.2a4 4 0 0 1 0 5.6" stroke={d.muted ? 'rgba(55,42,84,.22)' : '#17a398'} />
-          <path d="M18.8 6.6a7.6 7.6 0 0 1 0 10.8" stroke={d.muted ? 'rgba(55,42,84,.22)' : '#17a398'} />
-          <path d="M16.4 8.6l6 6.8M22.4 8.6l-6 6.8" stroke="#ff3b3b" opacity={d.muted ? 1 : 0} />
-        </svg>
+        <SpeakerIcon muted={d.muted} size={24} />
       </div>
 
       {/* progress stepper */}
