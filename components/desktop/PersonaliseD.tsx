@@ -1,12 +1,7 @@
 import type { Dish } from '@/lib/dishes';
 import DishIcon from '../DishIcon';
+import MessagePicker from '../MessagePicker';
 import { MAX_MESSAGE, MAX_NAME } from '@/lib/order';
-
-const SUGGESTIONS = [
-  'Ado, eat something no 🙄',
-  'Miss you machan. eat well 💛',
-  'Stop skipping lunch, I can see you 👀',
-];
 
 type Props = {
   dish: Dish;
@@ -34,13 +29,13 @@ export default function PersonaliseD({ dish, sender, recipient, message, onSende
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 36, alignItems: 'start' }}>
           {/* form */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               <label className="field-label" style={{ fontSize: 13 }}>Your name</label>
               <input
                 value={sender}
                 onChange={(e) => onSender(e.target.value)}
-                placeholder="e.g. Dinuk"
+                placeholder="e.g. Susantha"
                 maxLength={MAX_NAME}
                 className="field-input"
                 style={{ padding: '15px 16px', fontSize: 17 }}
@@ -53,7 +48,7 @@ export default function PersonaliseD({ dish, sender, recipient, message, onSende
               <input
                 value={recipient}
                 onChange={(e) => onRecipient(e.target.value)}
-                placeholder="e.g. Shalini"
+                placeholder="e.g. Susanthi"
                 maxLength={MAX_NAME}
                 className="field-input"
                 style={{ padding: '15px 16px', fontSize: 17 }}
@@ -64,40 +59,24 @@ export default function PersonaliseD({ dish, sender, recipient, message, onSende
               <textarea
                 value={message}
                 onChange={(e) => onMessage(e.target.value)}
-                placeholder="Ado, eat something no 🙄"
+                placeholder="Bada Pirenna Kanna"
                 rows={3}
                 maxLength={MAX_MESSAGE}
                 className="field-input"
                 style={{ padding: '15px 16px', fontSize: 17, resize: 'none' }}
               />
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 6 }}>
-                {SUGGESTIONS.map((t) => (
-                  <div
-                    key={t}
-                    onClick={() => onMessage(t)}
-                    className="press"
-                    style={{
-                      background: message === t ? '#c8f0d8' : '#fdf6ea',
-                      border: '2px solid #372a54',
-                      borderRadius: 999,
-                      padding: '8px 14px',
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: '#372a54',
-                      whiteSpace: 'nowrap',
-                      lineHeight: 1.5,
-                      ['--lift' as string]: '2px',
-                      ['--drop' as string]: '2px',
-                      ['--rest' as string]: '0',
-                    }}
-                  >
-                    {t}
-                  </div>
-                ))}
+              <div className="field-label" style={{ fontSize: 12, letterSpacing: '.06em', marginTop: 8 }}>
+                Quick Messages
               </div>
+              <MessagePicker message={message} onPick={onMessage} height="clamp(150px,32vh,320px)" variant="desktop" />
             </div>
-            <div onClick={onSubmit} className="press cta" style={{ marginTop: 8, background: '#17a398', fontSize: 22, padding: 18 }}>
-              Release the drone 🚁
+            {/* rides along the bottom of the viewport while the deck is being browsed */}
+            <div
+              onClick={onSubmit}
+              className="press cta"
+              style={{ position: 'sticky', bottom: 24, marginTop: 8, flex: 'none', background: '#17a398', fontSize: 22, padding: 18 }}
+            >
+              Release the drone
             </div>
           </div>
           {/* dish preview */}
@@ -115,27 +94,31 @@ export default function PersonaliseD({ dish, sender, recipient, message, onSende
               gap: 12,
               position: 'sticky',
               top: 32,
+              alignSelf: 'start',
             }}
           >
-            <DishIcon src={dish.low} alt={dish.name} size={104} style={{ animation: 'bobD 3s ease-in-out infinite' }} />
+            <DishIcon src={dish.high} alt={dish.name} size={150} style={{ animation: 'bobD 3s ease-in-out infinite' }} />
             <div className="fredoka" style={{ fontWeight: 700, fontSize: 26, color: '#372a54', lineHeight: 1.15 }}>
               {dish.name}
             </div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#372a54', opacity: 0.65 }}>{dish.blurb}</div>
-            <div
-              style={{
-                background: '#fff',
-                border: '2px solid #372a54',
-                borderRadius: 999,
-                padding: '7px 16px',
-                fontFamily: 'monospace',
-                fontSize: 12,
-                fontWeight: 700,
-                color: '#6d5f8e',
-                marginTop: 6,
-              }}
-            >
-              ORDER #8FQ2 · Rs. 0.00
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 6 }}>
+              <div
+                style={{
+                  background: '#fff',
+                  border: '2px solid #372a54',
+                  borderRadius: 999,
+                  padding: '7px 16px',
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#6d5f8e',
+                }}
+              >
+                ORDER #8FQ2
+              </div>
+              <div className="fredoka" style={{ fontWeight: 700, fontSize: 30, lineHeight: 1, color: '#17a398', letterSpacing: '-.5px' }}>
+                Rs. 0.00
+              </div>
             </div>
           </div>
         </div>

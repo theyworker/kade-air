@@ -1,12 +1,7 @@
 import type { Dish } from '@/lib/dishes';
 import DishIcon from '../DishIcon';
+import MessagePicker from '../MessagePicker';
 import { MAX_MESSAGE, MAX_NAME } from '@/lib/order';
-
-const SUGGESTIONS = [
-  'Ado, eat something no 🙄',
-  'Miss you machan. eat well 💛',
-  'Stop skipping lunch, I can see you 👀',
-];
 
 type Props = {
   dish: Dish;
@@ -57,7 +52,7 @@ export default function Personalise({ dish, sender, recipient, message, onSender
           <input
             value={sender}
             onChange={(e) => onSender(e.target.value)}
-            placeholder="e.g. Dinuk"
+            placeholder="e.g. Susantha"
             maxLength={MAX_NAME}
             className="field-input"
           />
@@ -69,7 +64,7 @@ export default function Personalise({ dish, sender, recipient, message, onSender
           <input
             value={recipient}
             onChange={(e) => onRecipient(e.target.value)}
-            placeholder="e.g. Shalini"
+            placeholder="e.g. Susanthi"
             maxLength={MAX_NAME}
             className="field-input"
           />
@@ -79,38 +74,21 @@ export default function Personalise({ dish, sender, recipient, message, onSender
           <textarea
             value={message}
             onChange={(e) => onMessage(e.target.value)}
-            placeholder="Ado, eat something no 🙄"
+            placeholder="Bada Pirenna Kanna"
             rows={3}
             maxLength={MAX_MESSAGE}
             className="field-input"
             style={{ resize: 'none' }}
           />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
-            {SUGGESTIONS.map((t) => (
-              <div
-                key={t}
-                onClick={() => onMessage(t)}
-                className="press"
-                style={{
-                  background: message === t ? '#c8f0d8' : '#fdf6ea',
-                  border: '2px solid #372a54',
-                  borderRadius: 999,
-                  padding: '7px 12px',
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: '#372a54',
-                  ['--lift' as string]: '2px',
-                  ['--drop' as string]: '2px',
-                  ['--rest' as string]: '0',
-                }}
-              >
-                {t}
-              </div>
-            ))}
+          <div className="field-label" style={{ fontSize: 11, marginTop: 8 }}>
+            Quick messages <span style={{ opacity: 0.6, textTransform: 'none', letterSpacing: 0 }}>· tap to use</span>
           </div>
+          <MessagePicker message={message} onPick={onMessage} height={230} />
         </div>
-        <div onClick={onSubmit} className="press cta" style={{ marginTop: 6, background: '#17a398', fontSize: 21 }}>
-          Release the drone 🚁
+      </div>
+      <div style={{ flex: 'none', padding: '12px 22px 26px', background: '#fdf6ea' }}>
+        <div onClick={onSubmit} className="press cta" style={{ background: '#17a398', fontSize: 21, padding: 17 }}>
+          Release the drone
         </div>
       </div>
     </div>

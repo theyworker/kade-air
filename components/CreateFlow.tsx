@@ -98,9 +98,10 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
       break;
     }
     case 'track': {
-      const T = desktop ? TrackScreenD : TrackScreen;
-      content = (
-        <T
+      content = desktop ? (
+        <TrackScreenD key={trackKey} dish={dish} onExit={() => setScreen('share')} onLoop={() => setScreen('loop')} />
+      ) : (
+        <TrackScreen
           key={trackKey}
           dish={dish}
           senderDisplay={senderDisplay(order)}
@@ -113,13 +114,21 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
       break;
     }
     case 'loop': {
-      const Lp = desktop ? LoopD : Loop;
-      content = (
-        <Lp
+      // Desktop skips the reveal card, so the note rides on the end card instead.
+      content = desktop ? (
+        <LoopD
           dish={dish}
           senderDisplay={senderDisplay(order)}
           recipientDisplay={recipientDisplay(order)}
-          chainNumber={chain + 1}
+          msgDisplay={messageDisplay(order)}
+          onSendAgain={() => setScreen('menu')}
+          onReplay={shared.onReplay}
+        />
+      ) : (
+        <Loop
+          dish={dish}
+          senderDisplay={senderDisplay(order)}
+          recipientDisplay={recipientDisplay(order)}
           onSendAgain={() => setScreen('menu')}
           onReplay={shared.onReplay}
         />

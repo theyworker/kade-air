@@ -22,26 +22,38 @@ export default function RecipientView({ order, initialDesktop = false }: Props) 
   const [trackKey, setTrackKey] = useState(0);
   const dish = findDish(order.dishId);
 
+  const onSendAgain = () => router.push(`/?chain=${order.chain + 1}`);
+  const onReplay = () => {
+    setTrackKey((k) => k + 1);
+    setScreen('track');
+  };
+
   let content: React.ReactNode;
   if (screen === 'loop') {
-    const Lp = desktop ? LoopD : Loop;
-    content = (
-      <Lp
+    // Desktop skips the reveal card, so the note rides on the end card instead.
+    content = desktop ? (
+      <LoopD
         dish={dish}
         senderDisplay={senderDisplay(order)}
         recipientDisplay={recipientDisplay(order)}
-        chainNumber={order.chain + 1}
-        onSendAgain={() => router.push(`/?chain=${order.chain + 1}`)}
-        onReplay={() => {
-          setTrackKey((k) => k + 1);
-          setScreen('track');
-        }}
+        msgDisplay={messageDisplay(order)}
+        onSendAgain={onSendAgain}
+        onReplay={onReplay}
+      />
+    ) : (
+      <Loop
+        dish={dish}
+        senderDisplay={senderDisplay(order)}
+        recipientDisplay={recipientDisplay(order)}
+        onSendAgain={onSendAgain}
+        onReplay={onReplay}
       />
     );
   } else {
-    const T = desktop ? TrackScreenD : TrackScreen;
-    content = (
-      <T
+    content = desktop ? (
+      <TrackScreenD key={trackKey} dish={dish} onLoop={() => setScreen('loop')} />
+    ) : (
+      <TrackScreen
         key={trackKey}
         dish={dish}
         senderDisplay={senderDisplay(order)}

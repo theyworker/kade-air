@@ -251,7 +251,7 @@ export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msg
             className="press cta"
             style={{ marginTop: 'auto', alignSelf: 'stretch', background: '#ff7a2f', borderRadius: 16, fontSize: 17, padding: 14, ['--lift' as string]: '5px', ['--drop' as string]: '4px' }}
           >
-            Nice. What now? →
+            Your Turn →
           </div>
         </div>
       ) : (

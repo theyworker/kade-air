@@ -1,3 +1,6 @@
+import BrandLogo from '../BrandLogo';
+import { floatArt } from '@/lib/dishes';
+
 export default function LandingD({ onStart }: { onStart: () => void }) {
   return (
     <div
@@ -10,32 +13,22 @@ export default function LandingD({ onStart }: { onStart: () => void }) {
       }}
     >
       {/* left: copy */}
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0, padding: '56px 64px', background: '#fdf6ea', position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 34 }}>
-          <div
-            style={{
-              width: 58,
-              height: 58,
-              borderRadius: 16,
-              background: '#ff7a2f',
-              border: '3px solid #372a54',
-              boxShadow: '0 5px 0 #372a54',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 30,
-            }}
-          >
-            🚁
-          </div>
-          <div>
-            <div className="fredoka" style={{ fontWeight: 700, fontSize: 30, color: '#372a54', lineHeight: 1, letterSpacing: -0.5 }}>
-              KADE AIR
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#8a7ba8', letterSpacing: '.14em', textTransform: 'uppercase' }}>
-              drone-ish deliveries
-            </div>
-          </div>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          gap: 0,
+          padding: '40px 64px',
+          background: '#fdf6ea',
+          position: 'relative',
+          zIndex: 2,
+          overflowY: 'auto',
+        }}
+      >
+        {/* the logo gives up width on short viewports so the headline keeps its size */}
+        <div style={{ marginBottom: 18, flex: 'none' }}>
+          <BrandLogo width="min(200px,26vh)" priority />
         </div>
         <h1
           className="fredoka"
@@ -51,12 +44,15 @@ export default function LandingD({ onStart }: { onStart: () => void }) {
         >
           Send your machan some food.
         </h1>
-        <p style={{ margin: '20px 0 0', fontSize: 19, fontWeight: 700, color: '#6d5f8e' }}>100% fake · 100% free · 0% calories</p>
-        <div style={{ display: 'flex', gap: 14, margin: '26px 0 34px' }}>
-          {['🥘', '🍳', '🍮', '🍕', '🧋'].map((e, i) => (
-            <div key={e} style={{ fontSize: 32, animation: `bobD 3s ${i * 0.4}s ease-in-out infinite` }}>
-              {e}
-            </div>
+        <p style={{ margin: '20px 0 0', fontSize: 19, fontWeight: 700, color: '#6d5f8e' }}>100% fake · 100% free · 0 calories</p>
+        <div style={{ display: 'flex', gap: 14, margin: '18px 0 22px' }}>
+          {floatArt.map((d, i) => (
+            <img
+              key={d.id}
+              src={d.low}
+              alt=""
+              style={{ width: 56, height: 56, objectFit: 'contain', animation: `bobD 3s ${i * 0.4}s ease-in-out infinite` }}
+            />
           ))}
         </div>
         <div

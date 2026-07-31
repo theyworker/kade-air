@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { Dish } from '@/lib/dishes';
-import DishIcon from '../DishIcon';
+import HangingDrone from '../HangingDrone';
 
 type Props = {
   dish: Dish;
@@ -61,24 +61,22 @@ export default function ShareD({ dish, senderDisplay, recipientDisplay, link, on
           <div style={{ background: '#fff', border: '2.5px solid #372a54', borderRadius: 22, boxShadow: '0 5px 0 #372a54', overflow: 'hidden' }}>
             <div
               style={{
+                position: 'relative',
+                height: 190,
                 background: 'linear-gradient(#8ed0f7,#ffedc2)',
-                padding: 30,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 16,
                 borderBottom: '2.5px solid #372a54',
+                overflow: 'hidden',
               }}
             >
-              <span style={{ fontSize: 48, animation: 'bobD 3s ease-in-out infinite' }}>🚁</span>
-              <DishIcon src={dish.low} alt={dish.name} size={64} />
+              {/* the design points this at dish.high; at 78px the 256px art is identical and 8× lighter */}
+              <HangingDrone dishIcon={dish.low} scale={0.82} top={22} bobAnim="bobD" />
             </div>
             <div style={{ padding: '18px 22px' }}>
               <div className="fredoka" style={{ fontWeight: 600, fontSize: 18, color: '#372a54' }}>
                 {senderDisplay} sent you {dish.name} 🛸
               </div>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#8a7ba8', marginTop: 4 }}>
-                Tap to watch the drone fly over Colombo · kade air
+                Tap to watch the drone fly over Colombo
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { preload } from 'react-dom';
 import type { Dish } from '@/lib/dishes';
 import { DESKTOP_GEOMETRY, STATUS_TEXT } from '@/lib/flight';
@@ -10,9 +11,6 @@ import SkylineD from './SkylineD';
 
 type Props = {
   dish: Dish;
-  senderDisplay: string;
-  recipientDisplay: string;
-  msgDisplay: string;
   onExit?: () => void;
   onLoop: () => void;
   fastMode?: boolean;
@@ -21,17 +19,22 @@ type Props = {
 
 const STEP_LABELS = ['Accepted', 'Preparing', 'Dispatched', 'Delivered'];
 
-export default function TrackScreenD({ dish, senderDisplay, recipientDisplay, msgDisplay, onExit, onLoop, fastMode = false, showTuk = true }: Props) {
+export default function TrackScreenD({ dish, onExit, onLoop, fastMode = false, showTuk = true }: Props) {
   const d = useDelivery(fastMode, DESKTOP_GEOMETRY, true);
   const { phase, world } = d;
 
-  // The reveal is a 1254px PNG. preload() starts the download as early as
-  // possible; useWarmImage also decodes it, so the final pop paints with no
-  // delay. Until it's warm we fall back to the low-res art, which is already
-  // cached from the menu — the circle is never empty.
+  // Desktop has no reveal card of its own — the end card is the reveal. Warm
+  // the big art here so it paints the instant the flight hands over.
   preload(dish.high, { as: 'image' });
-  const heroReady = useWarmImage(dish.high);
-  const heroSrc = heroReady ? dish.high : dish.low;
+  useWarmImage(dish.high);
+
+  // Confetti lands, then the scene gives way to the end card (design: +1600ms
+  // after delivery, which is 900ms past the `revealed` beat at +700ms).
+  useEffect(() => {
+    if (!d.revealed) return;
+    const id = setTimeout(onLoop, 900);
+    return () => clearTimeout(id);
+  }, [d.revealed, onLoop]);
 
   return (
     <div style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: '#8ed0f7' }}>
@@ -166,9 +169,15 @@ export default function TrackScreenD({ dish, senderDisplay, recipientDisplay, ms
       <div
         onClick={d.toggleMute}
         className="press back-btn"
-        style={{ position: 'absolute', top: 24, right: 24, zIndex: 31, width: 44, height: 44, borderRadius: 14, fontSize: 18 }}
+        style={{ position: 'absolute', top: 24, right: 24, zIndex: 31, width: 44, height: 44, borderRadius: 14 }}
+        aria-label={d.muted ? 'Unmute' : 'Mute'}
       >
-        {d.muted ? '🔇' : '🔊'}
+        <svg viewBox="0 0 24 24" width={24} height={24} fill="none" stroke="#372a54" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 9.5h3.2L12 5.5v13L7.2 14.5H4z" fill="#ff7a2f" />
+          <path d="M16 9.2a4 4 0 0 1 0 5.6" stroke={d.muted ? 'rgba(55,42,84,.22)' : '#17a398'} />
+          <path d="M18.8 6.6a7.6 7.6 0 0 1 0 10.8" stroke={d.muted ? 'rgba(55,42,84,.22)' : '#17a398'} />
+          <path d="M16.4 8.6l6 6.8M22.4 8.6l-6 6.8" stroke="#ff3b3b" opacity={d.muted ? 1 : 0} />
+        </svg>
       </div>
 
       {/* progress stepper */}
@@ -229,96 +238,39 @@ export default function TrackScreenD({ dish, senderDisplay, recipientDisplay, ms
         })}
       </div>
 
-      {/* full-screen reveal: the food slowly zooms while the note is read */}
-      {d.revealed ? (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 40,
-            background: '#fdf6ea',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '96px 24px 34px',
-            textAlign: 'center',
-            animation: 'popIn .55s cubic-bezier(.2,1.4,.5,1) both',
-          }}
-        >
+      {/* bottom overlay: status card */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          bottom: 28,
+          zIndex: 31,
+          width: 'min(640px,90vw)',
+          background: '#fff',
+          border: '3px solid #372a54',
+          borderRadius: 26,
+          boxShadow: '0 6px 0 #372a54',
+          padding: '18px 22px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+          <div className="fredoka" style={{ fontWeight: 600, fontSize: 19, color: '#372a54', lineHeight: 1.25 }}>
+            {STATUS_TEXT[phase]}
+          </div>
+          <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 17, color: '#17a398', whiteSpace: 'nowrap' }}>ETA {d.etaText}</div>
+        </div>
+        <div style={{ marginTop: 14, height: 16, border: '2.5px solid #372a54', borderRadius: 999, background: '#fdf6ea', overflow: 'hidden' }}>
           <div
             style={{
-              width: 'min(34vw,320px)',
-              aspectRatio: '1',
-              borderRadius: '50%',
-              background: dish.c,
-              border: '4px solid #372a54',
-              boxShadow: '0 8px 0 #372a54',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flex: 'none',
-              overflow: 'hidden',
-              padding: 22,
+              height: '100%',
+              width: `${d.progressPct.toFixed(1)}%`,
+              background: 'repeating-linear-gradient(-45deg,#ffc94d 0 8px,#ff7a2f 8px 16px)',
+              borderRadius: 999,
             }}
-          >
-            <img
-              src={heroSrc}
-              alt={dish.name}
-              decoding="sync"
-              fetchPriority="high"
-              style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', filter: 'drop-shadow(0 8px 10px rgba(55,42,84,.18))' }}
-            />
-          </div>
-          <div className="fredoka" style={{ fontWeight: 600, fontSize: 22, color: '#6d5f8e', lineHeight: 1.15, marginTop: 24 }}>
-            {dish.name} — delivered!
-          </div>
-          <div className="fredoka" style={{ marginTop: 20, fontWeight: 700, fontSize: 52, lineHeight: 1.1, letterSpacing: '-1.2px', color: '#372a54', textWrap: 'pretty', maxWidth: 720 }}>
-            “{msgDisplay}”
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: '#8a7ba8', letterSpacing: '.02em', marginTop: 14 }}>— from {senderDisplay}</div>
-          <div
-            onClick={onLoop}
-            className="press cta"
-            style={{ marginTop: 'auto', width: 'min(640px,90vw)', background: '#ff7a2f', borderRadius: 16, fontSize: 18, padding: 15, ['--lift' as string]: '5px', ['--drop' as string]: '4px' }}
-          >
-            Nice. What now? →
-          </div>
+          />
         </div>
-      ) : (
-        <div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            bottom: 28,
-            zIndex: 31,
-            width: 'min(640px,90vw)',
-            background: '#fff',
-            border: '3px solid #372a54',
-            borderRadius: 26,
-            boxShadow: '0 6px 0 #372a54',
-            padding: '18px 22px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-            <div className="fredoka" style={{ fontWeight: 600, fontSize: 19, color: '#372a54', lineHeight: 1.25 }}>
-              {STATUS_TEXT[phase]}
-            </div>
-            <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 17, color: '#17a398', whiteSpace: 'nowrap' }}>ETA {d.etaText}</div>
-          </div>
-          <div style={{ marginTop: 14, height: 16, border: '2.5px solid #372a54', borderRadius: 999, background: '#fdf6ea', overflow: 'hidden' }}>
-            <div
-              style={{
-                height: '100%',
-                width: `${d.progressPct.toFixed(1)}%`,
-                background: 'repeating-linear-gradient(-45deg,#ffc94d 0 8px,#ff7a2f 8px 16px)',
-                borderRadius: 999,
-              }}
-            />
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -5,12 +5,11 @@ type Props = {
   dish: Dish;
   senderDisplay: string;
   recipientDisplay: string;
-  chainNumber: number;
   onSendAgain: () => void;
   onReplay: () => void;
 };
 
-export default function Loop({ dish, senderDisplay, recipientDisplay, chainNumber, onSendAgain, onReplay }: Props) {
+export default function Loop({ dish, senderDisplay, recipientDisplay, onSendAgain, onReplay }: Props) {
   return (
     <div
       style={{
@@ -44,31 +43,16 @@ export default function Loop({ dish, senderDisplay, recipientDisplay, chainNumbe
           <span style={{ fontSize: 16, fontWeight: 600, color: '#8a7ba8' }}>(emotionally)</span>
         </div>
         <p style={{ margin: '12px 0 0', fontSize: 15, fontWeight: 700, color: '#6d5f8e', lineHeight: 1.45 }}>
-          {senderDisplay} just fed {recipientDisplay} one imaginary {dish.name}. Zero rupees. Zero regrets.
+          {senderDisplay} just &ldquo;fed&rdquo; {recipientDisplay} one imaginary {dish.name}.
+          <br />
+          Zero rupees. Zero regrets.
         </p>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            marginTop: 16,
-            background: '#fdf6ea',
-            border: '2.5px solid #372a54',
-            borderRadius: 999,
-            padding: '9px 18px',
-          }}
-        >
-          <span style={{ fontSize: 15 }}>🔗</span>
-          <span className="fredoka" style={{ fontWeight: 600, fontSize: 14, color: '#372a54' }}>
-            You&apos;re #{chainNumber} in this food chain
-          </span>
-        </div>
         <p style={{ margin: '14px 0 0', fontSize: 11, fontWeight: 700, color: '#a394c2', letterSpacing: '.1em', textTransform: 'uppercase' }}>
-          kade air · nothing arrives, on purpose
+          Air Kade · nothing arrives, on purpose
         </p>
       </div>
       <div onClick={onSendAgain} className="press cta" style={{ width: '100%', background: '#17a398', fontSize: 20 }}>
-        Now YOU send food to a friend
+        Send an imaginary snack
       </div>
       <div onClick={onReplay} style={{ fontSize: 13, fontWeight: 700, color: '#7a3b1e', cursor: 'pointer', textDecoration: 'underline' }}>
         watch the drone again
