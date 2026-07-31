@@ -54,6 +54,16 @@ describe('clean() behaviour, observed through encode/decode', () => {
     assert.equal(decoded?.sender, 'A B');
   });
 
+  test('replaces the DEL control character (\\x7f) with a space, not just \\x00', () => {
+    // DEL (0x7f) sits outside the contiguous 0x00-0x1f control-character
+    // range and is matched by a separate term in clean()'s regex, so it is
+    // the character most likely to be silently dropped by a careless edit
+    // to that regex.
+    const order = { dishId: 'kottu', sender: 'A\x7fB', recipient: 'Amma', message: 'Enjoy!', chain: 1 };
+    const decoded = decodeOrder(encodeOrder(order));
+    assert.equal(decoded?.sender, 'A B');
+  });
+
   test('collapses runs of internal whitespace to a single space', () => {
     const order = { dishId: 'kottu', sender: 'A    B', recipient: 'Amma', message: 'Enjoy!', chain: 1 };
     const decoded = decodeOrder(encodeOrder(order));
@@ -83,6 +93,26 @@ describe('truncation', () => {
     assert.equal(decoded?.message.length, MAX_MESSAGE);
     assert.equal(decoded?.message, 'B'.repeat(MAX_MESSAGE));
   });
+
+  test('truncation can split a surrogate pair mid-emoji, leaving a lone surrogate (documented, not endorsed)', () => {
+    // clean() truncates with .slice(0, max), which cuts by UTF-16 code unit,
+    // not by codepoint. An emoji landing exactly on the MAX_MESSAGE boundary
+    // gets its surrogate pair split: the high surrogate survives, the low
+    // surrogate (and everything after it) is cut away. This is a real
+    // failure mode a user can hit (the quick-message deck is emoji-heavy and
+    // MAX_MESSAGE is a limit they will reach) — pinned here as-is, not fixed,
+    // per the task's constraint against editing lib/order.ts.
+    const longMessage = 'A'.repeat(139) + '😌' + 'tail';
+    const order = { dishId: 'kottu', sender: 'Devaka', recipient: 'Amma', message: longMessage, chain: 1 };
+    const decoded = decodeOrder(encodeOrder(order));
+    // Verified empirically: the codec survives the lone surrogate (it is not
+    // dropped and does not throw) — JSON.stringify escapes it as \ud83d and
+    // decodeOrder hands it straight back. 'tail' and the emoji's low
+    // surrogate are gone entirely; only the high surrogate remains.
+    assert.equal(decoded?.message.length, MAX_MESSAGE);
+    assert.equal(decoded?.message, 'A'.repeat(139) + '\ud83d');
+    assert.equal(decoded?.message.charCodeAt(MAX_MESSAGE - 1), 0xd83d);
+  });
 });
 
 describe('chain clamping', () => {
@@ -105,6 +135,13 @@ describe('chain clamping', () => {
 
   test('rounds a fractional value to the nearest integer', () => {
     assert.equal(withChain(2.7), 3);
+  });
+
+  test('rounds 2.4 down to 2, distinguishing rounding from ceiling', () => {
+    // 2.7 rounds to 3 under Math.round, Math.ceil, and Math.trunc+1 alike, so
+    // it can't tell rounding apart from ceiling. 2.4 does: Math.round takes
+    // it to 2, while Math.ceil would take it to 3.
+    assert.equal(withChain(2.4), 2);
   });
 
   test('falls back to 1 for NaN', () => {

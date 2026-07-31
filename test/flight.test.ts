@@ -206,7 +206,14 @@ describe('worldAt path continuity — no teleporting across phase boundaries', (
     // number: arriving's y formula converges to 29.5 + arrDy as p -> 1;
     // delivered's y formula starts at exitY0 as p -> 0.
     const expectedGap = 29.5 + DESKTOP_GEOMETRY.arrDy - DESKTOP_GEOMETRY.exitY0;
-    assert.equal(expectedGap, 0.5);
+    assert.equal(
+      expectedGap,
+      0.5,
+      'DESKTOP_GEOMETRY no longer has the expected 0.5 gap — if this failed because ' +
+        'DESKTOP_GEOMETRY was fixed, delete this test AND add DESKTOP_GEOMETRY to the ' +
+        '"arriving -> delivered does not teleport" continuity test above, which currently ' +
+        'covers MOBILE_GEOMETRY only.'
+    );
 
     // Pin the measured jump to the expected gap (within a tiny epsilon for
     // the +/-1ms sampling window), proving this is that geometry mismatch
@@ -219,7 +226,10 @@ describe('worldAt path continuity — no teleporting across phase boundaries', (
     // And demonstrate it clears the general continuity tolerance used for
     // every other boundary above — this is the discontinuity that
     // tolerance is deliberately NOT loose enough to hide.
-    assert.ok(Math.abs(dy) > CONTINUITY_TOLERANCE * 100);
+    assert.ok(
+      Math.abs(dy) > CONTINUITY_TOLERANCE * 100,
+      `expected |dy| (${Math.abs(dy)}) to clear ${CONTINUITY_TOLERANCE * 100}, measured dy=${dy}`
+    );
   });
 });
 
@@ -244,9 +254,13 @@ describe('worldAt anchors', () => {
     assert.equal(w.cam, 0);
   });
 
+  // Below, the cam sweep, the visible tests, and the dispP tests (in the next
+  // describe block) all sample worldAt with MOBILE_GEOMETRY only, never
+  // DESKTOP_GEOMETRY. That is deliberate, not an oversight: worldAt reads the
+  // geometry parameter (G) only when computing x and y — cam, dispP, and
+  // visible are never branched on G in lib/flight.ts — so sweeping against a
+  // second geometry would exercise the exact same code path and add nothing.
   test('cam never decreases across a sweep of the whole flight (camera only pans forward)', () => {
-    // cam does not depend on the geometry argument in lib/flight.ts (no
-    // branch reads G when computing cam), so sweeping once is sufficient.
     const steps = 500;
     let prevCam = -Infinity;
     for (let i = 0; i <= steps; i++) {
@@ -284,6 +298,9 @@ describe('worldAt anchors', () => {
 });
 
 describe('dispP', () => {
+  // MOBILE_GEOMETRY only throughout this block — see the comment on the cam
+  // sweep in 'worldAt anchors' above: dispP never reads the geometry
+  // argument, so a second sweep against DESKTOP_GEOMETRY would add nothing.
   const D = durations(false);
   const dispStart = D.acc + D.prep;
   const dispEnd = dispStart + D.disp;

@@ -11,9 +11,11 @@ import { DISHES, findDish, floatArt, MENU_ART } from '../lib/dishes';
 const REPO_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PUBLIC_DIR = path.join(REPO_ROOT, 'public');
 
-// Dish.low/high are absolute-from-web-root paths (they start with '/'), so a
-// naive path.join would resolve them as absolute filesystem paths and discard
-// PUBLIC_DIR entirely. Strip the leading slash before joining.
+// Dish.low/high are absolute-from-web-root paths (they start with '/'). That
+// leading slash is web-root notation, not a filesystem absolute path, so it
+// must be stripped before joining onto PUBLIC_DIR (path.join itself handles a
+// leading '/' segment fine — it's path.resolve that would treat it as anchoring
+// a new filesystem root and discard everything before it).
 function resolvePublicPath(webPath: string): string {
   return path.join(PUBLIC_DIR, webPath.replace(/^\//, ''));
 }
@@ -109,9 +111,9 @@ describe('MENU_ART', () => {
 describe('dish field integrity', () => {
   for (const d of DISHES) {
     test(`${d.id} has a non-empty name, emoji, and blurb`, () => {
-      assert.equal(d.name.length > 0, true);
-      assert.equal(d.emoji.length > 0, true);
-      assert.equal(d.blurb.length > 0, true);
+      assert.ok(d.name.length > 0, `${d.id}: expected non-empty name, got ${JSON.stringify(d.name)}`);
+      assert.ok(d.emoji.length > 0, `${d.id}: expected non-empty emoji, got ${JSON.stringify(d.emoji)}`);
+      assert.ok(d.blurb.length > 0, `${d.id}: expected non-empty blurb, got ${JSON.stringify(d.blurb)}`);
     });
 
     test(`${d.id}'s c is a valid #rrggbb hex colour`, () => {

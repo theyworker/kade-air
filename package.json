@@ -2,11 +2,14 @@
   "name": "kade-air",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx --test \"test/**/*.test.ts\""
+    "test": "tsx --test test/dishes.test.ts test/flight.test.ts test/order.test.ts test/ua.test.ts"
   },
   "dependencies": {
     "next": "^15.3.4",
