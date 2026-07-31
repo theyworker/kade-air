@@ -15,38 +15,28 @@ type Props = {
   variant?: 'phone' | 'desktop';
 };
 
-// The deck is longer than the screen, so it creeps upward on its own and the
-// fade mask hints there's more below. Any pointer contact parks it for a beat
-// so nobody has to chase a moving target.
+// The deck is longer than the screen, so it creeps upward on its own to
+// advertise that there's more below. The moment someone scrolls it themselves
+// the creep stops for good — it used to resume and wrap back to the top, which
+// made the last few messages impossible to hold on to.
 export default function MessagePicker({ message, onPick, height, variant = 'phone' }: Props) {
   const desktop = variant === 'desktop';
   const ref = useRef<HTMLDivElement>(null);
-  const paused = useRef(false);
-  const resumeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const surrendered = useRef(false);
 
   useEffect(() => {
     const id = setInterval(() => {
       const el = ref.current;
-      if (!el || paused.current) return;
+      if (!el || surrendered.current) return;
       const max = el.scrollHeight - el.clientHeight;
       if (max <= 1) return;
       el.scrollTop = el.scrollTop >= max - 0.5 ? 0 : el.scrollTop + 0.5;
     }, 24);
-    return () => {
-      clearInterval(id);
-      clearTimeout(resumeTimer.current);
-    };
+    return () => clearInterval(id);
   }, []);
 
-  const pause = () => {
-    paused.current = true;
-    clearTimeout(resumeTimer.current);
-  };
-  const resume = () => {
-    clearTimeout(resumeTimer.current);
-    resumeTimer.current = setTimeout(() => {
-      paused.current = false;
-    }, 1200);
+  const surrender = () => {
+    surrendered.current = true;
   };
 
   const mask = 'linear-gradient(to bottom, transparent 0, #000 18px, #000 calc(100% - 26px), transparent 100%)';
@@ -54,11 +44,10 @@ export default function MessagePicker({ message, onPick, height, variant = 'phon
   return (
     <div
       ref={ref}
-      onPointerEnter={pause}
-      onPointerLeave={resume}
-      onWheel={pause}
-      onTouchStart={pause}
-      onTouchEnd={resume}
+      onPointerEnter={surrender}
+      onPointerDown={surrender}
+      onWheel={surrender}
+      onTouchStart={surrender}
       style={{
         display: 'flex',
         flexWrap: 'wrap',
@@ -69,7 +58,10 @@ export default function MessagePicker({ message, onPick, height, variant = 'phon
         flex: 'none',
         overflowY: 'auto',
         alignContent: 'flex-start',
-        overscrollBehavior: 'contain',
+        // `contain` used to trap the page: on a short phone this box covers most
+        // of the scrollable area, so a finger landing on it could never reach
+        // the fields below. Chaining to the page once the deck ends is the way out.
+        overscrollBehavior: 'auto',
         scrollbarWidth: 'none',
         WebkitMaskImage: mask,
         maskImage: mask,
