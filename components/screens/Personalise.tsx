@@ -83,7 +83,9 @@ export default function Personalise({ dish, sender, recipient, message, onSender
           <div className="field-label" style={{ fontSize: 11, marginTop: 8 }}>
             Quick messages <span style={{ opacity: 0.6, textTransform: 'none', letterSpacing: 0 }}>· tap to use</span>
           </div>
-          <MessagePicker message={message} onPick={onMessage} height={230} />
+          {/* Sized off the live viewport (dvh follows the mobile URL bar), so on a
+              short phone the deck stays a strip rather than swallowing the form. */}
+          <MessagePicker message={message} onPick={onMessage} height="clamp(112px, 26dvh, 236px)" />
         </div>
       </div>
       <div style={{ flex: 'none', padding: '12px 22px 26px', background: '#fdf6ea' }}>

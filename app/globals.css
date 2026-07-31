@@ -121,11 +121,18 @@ input::placeholder, textarea::placeholder { color: #b3a8c9; }
 /* ---- shared bits ---- */
 .fredoka { font-family: var(--font-fredoka), sans-serif; }
 
+/* The design's 58px top padding clears the mock's status bar and notch. Those
+   only render inside the bezel (see the media query above), so on a real phone
+   that was 58px of dead space at the top of every screen — worth reclaiming
+   when the whole form has to fit. */
 .screen-head {
-  padding: 58px 22px 12px;
+  padding: calc(14px + env(safe-area-inset-top)) 22px 12px;
   display: flex;
   align-items: center;
   gap: 12px;
+}
+@media (min-width: 520px) and (min-height: 700px) {
+  .screen-head { padding-top: 58px; }
 }
 .back-btn {
   width: 38px;
