@@ -1,3 +1,5 @@
+import BrandLogo from '../BrandLogo';
+
 type Props = {
   ticketStamped: boolean;
   kitchenBusy: boolean;
@@ -36,24 +38,14 @@ export default function KitchenD({ ticketStamped, kitchenBusy, chefHanding, hand
             borderTop: '2.5px solid #372a54',
           }}
         />
-        {/* hanging sign */}
-        <div style={{ position: 'absolute', top: 0, left: '63%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ width: 3, height: 96, background: '#372a54' }} />
-          <div
-            className="fredoka"
-            style={{
-              background: '#17a398',
-              border: '3px solid #372a54',
-              borderRadius: 14,
-              padding: '9px 26px',
-              fontWeight: 600,
-              fontSize: 20,
-              color: '#fff',
-              letterSpacing: '.06em',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            KADÉ KITCHEN · කඩේ
+        {/* hanging sign — the shop's own board, slung from two rods above the chef */}
+        <div style={{ position: 'absolute', top: 0, left: '63%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 4 }}>
+          <div style={{ display: 'flex', gap: 150 }}>
+            <div style={{ width: 3, height: 40, background: '#372a54' }} />
+            <div style={{ width: 3, height: 40, background: '#372a54' }} />
+          </div>
+          <div style={{ background: '#fff', border: '4px solid #372a54', borderRadius: 22, boxShadow: '0 7px 0 #372a54', padding: '16px 26px' }}>
+            <BrandLogo width={240} />
           </div>
         </div>
         {/* order ticket */}
