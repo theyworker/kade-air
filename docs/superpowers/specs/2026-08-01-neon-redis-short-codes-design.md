@@ -58,7 +58,7 @@ work correctly, if more slowly, with Redis entirely absent.
 | Redis TTL | 2 days | Cache eviction only — a miss re-reads Neon and re-warms |
 | Write timing | On "Release the drone" | A screen transition users already expect to take a beat |
 | Read path | Cache order data only, not rendered PNGs | Vercel's CDN already caches the image response by URL |
-| Code length | 8 chars, 32-char alphabet | ~40 bits; short enough to read aloud, with rate limiting behind it |
+| Code length | 8 chars, 30-char alphabet | ~39 bits; short enough to read aloud, with rate limiting behind it |
 
 ## Data model
 
@@ -92,8 +92,10 @@ justifies its dependency tree here.
 
 ## Short codes
 
-- **Alphabet:** 32 characters, with ambiguous glyphs removed (`0`/`O`, `1`/`l`/`I`).
-- **Length:** 8 characters → ~1.1 × 10¹² possibilities (~40 bits).
+- **Alphabet:** `23456789ABCDEFGHJKMNPQRSTVWXYZ` — 30 characters. Digits 2-9 plus A-Z
+  less `I`, `L`, `O` (misread against `1` and `0`) and `U` (keeps accidental
+  obscenities out of generated codes).
+- **Length:** 8 characters → 30⁸ ≈ 6.56 × 10¹¹ possibilities (~39.3 bits).
 - **Source:** `crypto.getRandomValues`. Never `Math.random`.
 - **Collision handling:** rely on the primary-key constraint. On a unique violation,
   generate a new code and retry (bounded attempts). No pre-check `SELECT`, so there is
@@ -102,12 +104,12 @@ justifies its dependency tree here.
 ### Accepted risk
 
 An 8-character code is enumerable in a way the old ~200-character token was not, and
-there is now PII behind it. With 10,000 orders stored, an attacker needs roughly 110
+there is now PII behind it. With 10,000 orders stored, an attacker needs roughly 66
 million requests to hit one valid link — slow, and extremely visible in logs.
 
 This is acceptable because the rate limiter covers the **read** path as well as
 creation, and `/d/` already emits `noindex, nofollow`. If more headroom is ever wanted,
-10 characters buys 50 bits for two more characters of link length.
+10 characters buys ~49 bits for two more characters of link length.
 
 ## Module structure
 
