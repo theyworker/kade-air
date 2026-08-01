@@ -1085,15 +1085,11 @@ import RecipientView from '@/components/RecipientView';
 import BrokenLink from '@/components/BrokenLink';
 import { findDish } from '@/lib/dishes';
 import { getOrder } from '@/lib/orders';
-import { senderDisplay } from '@/lib/order';
+import { senderDisplay, type Order } from '@/lib/order';
 import { clientIp, readLimiter } from '@/lib/ratelimit';
 import { isDesktopUA } from '@/lib/ua';
 
 type Props = { params: Promise<{ code: string }> };
-
-// generateMetadata and the page component both need the order, and both run in
-// one render pass. React's cache() collapses that into a single lookup.
-const loadOrder = cache(getOrder);
 
 /**
  * True when this client may proceed.
@@ -1111,6 +1107,25 @@ async function mayRead(ip: string): Promise<boolean> {
     return true;
   }
 }
+
+/**
+ * The one door to an order for this request.
+ *
+ * The limiter check lives inside the cached loader rather than in the page
+ * component, because generateMetadata also loads the order and runs in the
+ * same pass — a check in only one of them would let the other pay for the
+ * database read anyway. cache() means one limiter call and one lookup per
+ * render, shared by both.
+ *
+ * Over-quota returns null, which is deliberately the same answer a dead code
+ * gives: the recipient sees BrokenLink, a crawler sees the stale-link title,
+ * and a guesser learns nothing about whether the code was real.
+ */
+const loadOrder = cache(async (code: string): Promise<Order | null> => {
+  const h = await headers();
+  if (!(await mayRead(clientIp(h)))) return null;
+  return getOrder(code);
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { code } = await params;
@@ -1138,11 +1153,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function DeliveryPage({ params }: Props) {
   const [{ code }, h] = await Promise.all([params, headers()]);
 
-  // Checked before the lookup, so a client grinding through codes stops costing
-  // database reads. Over-quota gets the same screen a dead code gets — there is
-  // nothing to gain by confirming to a guesser that they were throttled.
-  if (!(await mayRead(clientIp(h)))) return <BrokenLink />;
-
+  // No limiter call here — loadOrder already made it, once, for this render.
+  // Checking again would charge the limiter twice per page view and halve the
+  // effective quota for legitimate readers.
+  //
   // A missing order and an unreachable database are different problems and get
   // different screens: BrokenLink says "this link is dead", which would be a lie
   // during an outage. Let a thrown error reach app/error.tsx instead.
@@ -1218,7 +1232,11 @@ export default async function Image({ params }: { params: Promise<{ code: string
   // A resolved card is immutable and can be cached hard. The fallback card is
   // a guess made during an outage or for a dead link — caching it would pin the
   // wrong preview to this URL long after the cause is fixed.
-  const headers: Record<string, string> = order
+  //
+  // Named responseHeaders, not headers: `headers` is already the imported
+  // next/headers function in this module, and shadowing it here is a TDZ
+  // ReferenceError, not merely a style problem.
+  const responseHeaders: Record<string, string> = order
     ? { 'Cache-Control': 'public, max-age=31536000, immutable' }
     : { 'Cache-Control': 'no-store' };
 
@@ -1226,7 +1244,7 @@ export default async function Image({ params }: { params: Promise<{ code: string
     (
       // ... the existing card JSX, entirely unchanged ...
     ),
-    { ...size, emoji: 'twemoji', headers },
+    { ...size, emoji: 'twemoji', headers: responseHeaders },
   );
 }
 ```
