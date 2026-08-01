@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { preload } from 'react-dom';
 import { MENU_ART, findDish } from '@/lib/dishes';
-import { encodeOrder, messageDisplay, recipientDisplay, senderDisplay } from '@/lib/order';
+import { messageDisplay, recipientDisplay, senderDisplay } from '@/lib/order';
+import { createOrderAction } from '@/app/actions';
 import { useIsDesktop } from '@/lib/useIsDesktop';
 import { usePrefetchImages } from '@/lib/usePrefetchImages';
 import PhoneShell from '@/components/PhoneShell';
@@ -47,8 +48,28 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
   if (screen !== 'home' && screen !== 'menu') preload(dish.high, { as: 'image' });
 
   const order = { dishId, sender, recipient, message, chain };
-  const token = useMemo(() => encodeOrder(order), [dishId, sender, recipient, message, chain]); // eslint-disable-line react-hooks/exhaustive-deps
-  const link = `${origin || 'https://kade.air'}/d/${token}`;
+
+  const [code, setCode] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<'rate_limited' | 'failed' | null>(null);
+
+  const link = code ? `${origin || 'https://kade.air'}/d/${code}` : '';
+
+  const submitOrder = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const result = await createOrderAction(order);
+
+    setSubmitting(false);
+    if (result.ok) {
+      setCode(result.code);
+      setScreen('share');
+      return;
+    }
+    setSubmitError(result.reason);
+  };
 
   const shared = {
     onSelect: (id: string) => {
@@ -89,7 +110,9 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
           onRecipient={setRecipient}
           onMessage={setMessage}
           onBack={() => setScreen('menu')}
-          onSubmit={() => setScreen('share')}
+          onSubmit={submitOrder}
+          submitting={submitting}
+          submitError={submitError}
         />
       );
       break;

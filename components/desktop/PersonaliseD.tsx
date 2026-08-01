@@ -13,9 +13,23 @@ type Props = {
   onMessage: (v: string) => void;
   onBack: () => void;
   onSubmit: () => void;
+  submitting?: boolean;
+  submitError?: 'rate_limited' | 'failed' | null;
 };
 
-export default function PersonaliseD({ dish, sender, recipient, message, onSender, onRecipient, onMessage, onBack, onSubmit }: Props) {
+export default function PersonaliseD({
+  dish,
+  sender,
+  recipient,
+  message,
+  onSender,
+  onRecipient,
+  onMessage,
+  onBack,
+  onSubmit,
+  submitting,
+  submitError,
+}: Props) {
   return (
     <div style={{ minHeight: '100vh', background: '#fdf6ea', animation: 'fadeUp .35s ease' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 40px 60px' }}>
@@ -71,12 +85,28 @@ export default function PersonaliseD({ dish, sender, recipient, message, onSende
               <MessagePicker message={message} onPick={onMessage} height="clamp(150px,32vh,320px)" variant="desktop" />
             </div>
             {/* rides along the bottom of the viewport while the deck is being browsed */}
+            {submitError && (
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#c2410c', marginTop: 8 }}>
+                {submitError === 'rate_limited'
+                  ? 'Ayyo. Kade uncle needs a break — try again in a bit.'
+                  : 'Ayyo. The drone never took off. Give it another go.'}
+              </div>
+            )}
             <div
-              onClick={onSubmit}
+              onClick={submitting ? undefined : onSubmit}
               className="press cta"
-              style={{ position: 'sticky', bottom: 24, marginTop: 8, flex: 'none', background: '#17a398', fontSize: 22, padding: 18 }}
+              style={{
+                position: 'sticky',
+                bottom: 24,
+                marginTop: 8,
+                flex: 'none',
+                background: submitting ? '#8ab5b1' : '#17a398',
+                fontSize: 22,
+                padding: 18,
+                cursor: submitting ? 'default' : 'pointer',
+              }}
             >
-              Release the drone
+              {submitting ? 'Warming up the drone…' : 'Release the drone'}
             </div>
           </div>
           {/* dish preview */}

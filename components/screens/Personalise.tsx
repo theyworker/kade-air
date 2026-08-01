@@ -13,9 +13,23 @@ type Props = {
   onMessage: (v: string) => void;
   onBack: () => void;
   onSubmit: () => void;
+  submitting?: boolean;
+  submitError?: 'rate_limited' | 'failed' | null;
 };
 
-export default function Personalise({ dish, sender, recipient, message, onSender, onRecipient, onMessage, onBack, onSubmit }: Props) {
+export default function Personalise({
+  dish,
+  sender,
+  recipient,
+  message,
+  onSender,
+  onRecipient,
+  onMessage,
+  onBack,
+  onSubmit,
+  submitting,
+  submitError,
+}: Props) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#fdf6ea', animation: 'fadeUp .35s ease' }}>
       <div className="screen-head">
@@ -89,8 +103,24 @@ export default function Personalise({ dish, sender, recipient, message, onSender
         </div>
       </div>
       <div style={{ flex: 'none', padding: '12px 22px 26px', background: '#fdf6ea' }}>
-        <div onClick={onSubmit} className="press cta" style={{ background: '#17a398', fontSize: 21, padding: 17 }}>
-          Release the drone
+        {submitError && (
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#c2410c', marginBottom: 10, textAlign: 'center' }}>
+            {submitError === 'rate_limited'
+              ? 'Ayyo. Kade uncle needs a break — try again in a bit.'
+              : 'Ayyo. The drone never took off. Give it another go.'}
+          </div>
+        )}
+        <div
+          onClick={submitting ? undefined : onSubmit}
+          className="press cta"
+          style={{
+            background: submitting ? '#8ab5b1' : '#17a398',
+            fontSize: 21,
+            padding: 17,
+            cursor: submitting ? 'default' : 'pointer',
+          }}
+        >
+          {submitting ? 'Warming up the drone…' : 'Release the drone'}
         </div>
       </div>
     </div>
