@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import { DATABASE_URL } from './env';
+import { env } from './env';
 import type { Order } from './order';
 
 export type StoredOrder = Order & { code: string; revokedAt: Date | null };
@@ -18,7 +18,8 @@ export class DuplicateCodeError extends Error {
   }
 }
 
-const sql = neon(DATABASE_URL);
+let client: ReturnType<typeof neon> | null = null;
+const sql = () => (client ??= neon(env.DATABASE_URL));
 
 // Postgres unique-violation SQLSTATE.
 const UNIQUE_VIOLATION = '23505';
@@ -26,7 +27,7 @@ const UNIQUE_VIOLATION = '23505';
 export const neonStore: OrderStore = {
   async insert(row) {
     try {
-      await sql`
+      await sql()`
         insert into orders (code, dish_id, sender, recipient, message, chain)
         values (${row.code}, ${row.dishId}, ${row.sender}, ${row.recipient}, ${row.message}, ${row.chain})
       `;
@@ -39,7 +40,7 @@ export const neonStore: OrderStore = {
   },
 
   async findByCode(code) {
-    const rows = (await sql`
+    const rows = (await sql()`
       select code, dish_id, sender, recipient, message, chain, revoked_at
       from orders
       where code = ${code}

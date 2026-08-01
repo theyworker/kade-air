@@ -12,6 +12,18 @@ function requireEnv(name: string): string {
   return value;
 }
 
-export const DATABASE_URL = requireEnv('DATABASE_URL');
-export const REDIS_URL = requireEnv('UPSTASH_REDIS_REST_URL');
-export const REDIS_TOKEN = requireEnv('UPSTASH_REDIS_REST_TOKEN');
+// Getters, not constants: importing a module that needs configuration must not
+// demand that configuration. The throw still fires by name, just on first use
+// rather than on import — which on serverless is the same moment in practice,
+// and which keeps `npm test` able to load these modules without credentials.
+export const env = {
+  get DATABASE_URL() {
+    return requireEnv('DATABASE_URL');
+  },
+  get REDIS_URL() {
+    return requireEnv('UPSTASH_REDIS_REST_URL');
+  },
+  get REDIS_TOKEN() {
+    return requireEnv('UPSTASH_REDIS_REST_TOKEN');
+  },
+};
