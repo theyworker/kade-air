@@ -9,9 +9,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx --test test/dishes.test.ts test/flight.test.ts test/order.test.ts test/ua.test.ts"
+    "test": "tsx --test test/dishes.test.ts test/flight.test.ts test/order.test.ts test/ua.test.ts",
+    "db:migrate": "tsx scripts/migrate.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.1",
     "next": "^15.3.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
