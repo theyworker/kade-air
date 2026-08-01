@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { preload } from 'react-dom';
 import { MENU_ART, findDish } from '@/lib/dishes';
+import type { Order } from '@/lib/order';
 import { messageDisplay, recipientDisplay, senderDisplay } from '@/lib/order';
 import { createOrderAction } from '@/app/actions';
+import type { CreateOrderResult } from '@/app/actions';
 import { useIsDesktop } from '@/lib/useIsDesktop';
 import { usePrefetchImages } from '@/lib/usePrefetchImages';
 import PhoneShell from '@/components/PhoneShell';
@@ -49,22 +51,40 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
 
   const order = { dishId, sender, recipient, message, chain };
 
-  const [code, setCode] = useState('');
+  // What the link actually points at. Frozen when the order is accepted, because
+  // the fields stay editable while the request is in flight — reading live state
+  // on these screens would let the Share card describe a different order than the
+  // code resolves to.
+  const [placed, setPlaced] = useState<{ code: string; order: Order } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<'rate_limited' | 'failed' | null>(null);
 
-  const link = code ? `${origin || 'https://kade.air'}/d/${code}` : '';
+  const link = placed ? `${origin || 'https://kade.air'}/d/${placed.code}` : '';
+
+  // Screens after submission describe the placed order; screens before it
+  // describe what is currently being composed.
+  const shown = placed?.order ?? order;
+  const shownDish = findDish(shown.dishId);
 
   const submitOrder = async () => {
     if (submitting) return;
     setSubmitting(true);
     setSubmitError(null);
 
-    const result = await createOrderAction(order);
+    let result: CreateOrderResult;
+    try {
+      result = await createOrderAction(order);
+    } catch (err) {
+      // A rejected action call is the network dropping, not the order being
+      // refused — the button must come back either way.
+      console.error('[kade-air] order action failed', err);
+      result = { ok: false, reason: 'failed' };
+    } finally {
+      setSubmitting(false);
+    }
 
-    setSubmitting(false);
     if (result.ok) {
-      setCode(result.code);
+      setPlaced({ code: result.code, order });
       setScreen('share');
       return;
     }
@@ -73,6 +93,7 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
 
   const shared = {
     onSelect: (id: string) => {
+      setSubmitError(null);
       setDishId(id);
       setScreen('personalise');
     },
@@ -109,7 +130,10 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
           onSender={setSender}
           onRecipient={setRecipient}
           onMessage={setMessage}
-          onBack={() => setScreen('menu')}
+          onBack={() => {
+            setSubmitError(null);
+            setScreen('menu');
+          }}
           onSubmit={submitOrder}
           submitting={submitting}
           submitError={submitError}
@@ -121,9 +145,9 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
       const S = desktop ? ShareD : Share;
       content = (
         <S
-          dish={dish}
-          senderDisplay={senderDisplay(order)}
-          recipientDisplay={recipientDisplay(order)}
+          dish={shownDish}
+          senderDisplay={senderDisplay(shown)}
+          recipientDisplay={recipientDisplay(shown)}
           link={link}
           onBack={() => setScreen('personalise')}
           onPreview={shared.onPreview}
@@ -133,14 +157,14 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
     }
     case 'track': {
       content = desktop ? (
-        <TrackScreenD key={trackKey} dish={dish} onExit={() => setScreen('share')} onLoop={() => setScreen('loop')} />
+        <TrackScreenD key={trackKey} dish={shownDish} onExit={() => setScreen('share')} onLoop={() => setScreen('loop')} />
       ) : (
         <TrackScreen
           key={trackKey}
-          dish={dish}
-          senderDisplay={senderDisplay(order)}
-          recipientDisplay={recipientDisplay(order)}
-          msgDisplay={messageDisplay(order)}
+          dish={shownDish}
+          senderDisplay={senderDisplay(shown)}
+          recipientDisplay={recipientDisplay(shown)}
+          msgDisplay={messageDisplay(shown)}
           onExit={() => setScreen('share')}
           onLoop={() => setScreen('loop')}
         />
@@ -151,18 +175,18 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
       // Desktop skips the reveal card, so the note rides on the end card instead.
       content = desktop ? (
         <LoopD
-          dish={dish}
-          senderDisplay={senderDisplay(order)}
-          recipientDisplay={recipientDisplay(order)}
-          msgDisplay={messageDisplay(order)}
+          dish={shownDish}
+          senderDisplay={senderDisplay(shown)}
+          recipientDisplay={recipientDisplay(shown)}
+          msgDisplay={messageDisplay(shown)}
           onSendAgain={() => setScreen('menu')}
           onReplay={shared.onReplay}
         />
       ) : (
         <Loop
-          dish={dish}
-          senderDisplay={senderDisplay(order)}
-          recipientDisplay={recipientDisplay(order)}
+          dish={shownDish}
+          senderDisplay={senderDisplay(shown)}
+          recipientDisplay={recipientDisplay(shown)}
           onSendAgain={() => setScreen('menu')}
           onReplay={shared.onReplay}
         />
