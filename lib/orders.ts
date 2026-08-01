@@ -72,3 +72,17 @@ export async function getOrder(code: string, deps: Deps = defaults()): Promise<O
 
   return order;
 }
+
+/**
+ * Kills a share link.
+ *
+ * The cache delete is not optional cleanup — a warm entry has no revocation
+ * flag on it, so leaving it would keep serving the order in full until the TTL
+ * expired. Store first, then cache: if the delete fails the row is still
+ * revoked and the entry expires on its own, which is recoverable. The reverse
+ * order is not.
+ */
+export async function revokeOrder(code: string, deps: Deps = defaults()): Promise<void> {
+  await deps.store.revoke(code);
+  await deps.cache.del(code);
+}

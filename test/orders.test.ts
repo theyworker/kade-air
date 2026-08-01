@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createOrder, getOrder } from '../lib/orders';
+import { createOrder, getOrder, revokeOrder } from '../lib/orders';
 import { DuplicateCodeError, type OrderStore, type StoredOrder } from '../lib/db';
 import type { OrderCache } from '../lib/cache';
 import type { Order } from '../lib/order';
@@ -22,7 +22,7 @@ const stored = (code: string, over: Partial<StoredOrder> = {}): StoredOrder => (
 
 function fakeStore(over: Partial<OrderStore> = {}) {
   const rows = new Map<string, StoredOrder>();
-  const calls = { insert: 0, find: 0 };
+  const calls = { insert: 0, find: 0, revoke: 0 };
   const store: OrderStore = {
     async insert(row) {
       calls.insert++;
@@ -33,6 +33,11 @@ function fakeStore(over: Partial<OrderStore> = {}) {
       calls.find++;
       return rows.get(code) ?? null;
     },
+    async revoke(code) {
+      calls.revoke++;
+      const row = rows.get(code);
+      if (row) rows.set(code, { ...row, revokedAt: new Date() });
+    },
     ...over,
   };
   return { store, rows, calls };
@@ -40,7 +45,7 @@ function fakeStore(over: Partial<OrderStore> = {}) {
 
 function fakeCache(over: Partial<OrderCache> = {}) {
   const entries = new Map<string, Order>();
-  const calls = { get: 0, set: 0 };
+  const calls = { get: 0, set: 0, del: 0 };
   const cache: OrderCache = {
     async get(code) {
       calls.get++;
@@ -49,6 +54,10 @@ function fakeCache(over: Partial<OrderCache> = {}) {
     async set(code, order) {
       calls.set++;
       entries.set(code, order);
+    },
+    async del(code) {
+      calls.del++;
+      entries.delete(code);
     },
     ...over,
   };
@@ -78,6 +87,14 @@ describe('createOrder', () => {
     await createOrder(dirty, { store, cache, newCode: () => 'CCCCCCCC' });
     assert.equal(rows.get('CCCCCCCC')?.sender, 'Dev aka');
     assert.equal(rows.get('CCCCCCCC')?.chain, 9999);
+  });
+
+  test('caches the sanitized value, not the raw input, since a warm cache is what recipients see', async () => {
+    const { store } = fakeStore();
+    const { cache, entries } = fakeCache();
+    const dirty = { ...anOrder, sender: '  Dev\x00aka  ', chain: 99999 };
+    await createOrder(dirty, { store, cache, newCode: () => 'EEEEEEEE' });
+    assert.equal(entries.get('EEEEEEEE')?.sender, 'Dev aka');
   });
 
   test('retries with a fresh code when the first one collides', async () => {
@@ -120,6 +137,7 @@ describe('createOrder', () => {
       async findByCode() {
         return null;
       },
+      async revoke() {},
     };
     await assert.rejects(() => createOrder(anOrder, { store, cache }), /neon down/);
   });
@@ -203,6 +221,7 @@ describe('getOrder', () => {
       async findByCode() {
         throw new Error('neon down');
       },
+      async revoke() {},
     };
     await assert.rejects(() => getOrder('ANYCODE0', { store, cache }), /neon down/);
   });
@@ -213,5 +232,56 @@ describe('getOrder', () => {
     rows.set('DIRTY000', stored('DIRTY000', { sender: '  Dev\x00aka  ' }));
     const found = await getOrder('DIRTY000', { store, cache });
     assert.equal(found?.sender, 'Dev aka');
+  });
+
+  test('caches the sanitized value after warming from a dirty row', async () => {
+    const { store, rows } = fakeStore();
+    const { cache, entries } = fakeCache();
+    rows.set('DIRTY001', stored('DIRTY001', { sender: '  Dev\x00aka  ' }));
+    await getOrder('DIRTY001', { store, cache });
+    assert.equal(entries.get('DIRTY001')?.sender, 'Dev aka');
+  });
+});
+
+describe('revokeOrder', () => {
+  test('marks the row revoked in the store', async () => {
+    const { store, rows } = fakeStore();
+    const { cache } = fakeCache();
+    rows.set('REVME000', stored('REVME000'));
+    await revokeOrder('REVME000', { store, cache });
+    assert.ok(rows.get('REVME000')?.revokedAt);
+  });
+
+  test('removes the cache entry', async () => {
+    const { store, rows } = fakeStore();
+    const { cache, entries } = fakeCache();
+    rows.set('REVME001', stored('REVME001'));
+    entries.set('REVME001', anOrder);
+    await revokeOrder('REVME001', { store, cache });
+    assert.equal(entries.has('REVME001'), false);
+  });
+
+  test('an order with a warm cache entry returns null from getOrder after revokeOrder', async () => {
+    const { store, rows } = fakeStore();
+    const { cache, entries } = fakeCache();
+    rows.set('REVME002', stored('REVME002'));
+    // Warm the cache exactly as createOrder would.
+    entries.set('REVME002', anOrder);
+
+    await revokeOrder('REVME002', { store, cache });
+
+    const found = await getOrder('REVME002', { store, cache });
+    assert.equal(found, null);
+  });
+
+  test('propagates a failing cache delete, because the link is still live', async () => {
+    const { store, rows } = fakeStore();
+    rows.set('REVME003', stored('REVME003'));
+    const { cache } = fakeCache({
+      async del() {
+        throw new Error('redis down');
+      },
+    });
+    await assert.rejects(() => revokeOrder('REVME003', { store, cache }), /redis down/);
   });
 });

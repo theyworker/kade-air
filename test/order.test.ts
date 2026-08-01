@@ -41,6 +41,20 @@ describe('sanitizeOrder cleaning', () => {
   });
 });
 
+describe('sanitizeOrder dishId validation', () => {
+  test('a known dish id survives unchanged', () => {
+    assert.equal(sanitizeOrder({ ...base, dishId: 'biryani' }).dishId, 'biryani');
+  });
+
+  test('an unknown dish id falls back to kottu', () => {
+    assert.equal(sanitizeOrder({ ...base, dishId: 'not-a-real-dish' }).dishId, 'kottu');
+  });
+
+  test('a very long dishId falls back rather than being stored', () => {
+    assert.equal(sanitizeOrder({ ...base, dishId: 'x'.repeat(100_000) }).dishId, 'kottu');
+  });
+});
+
 describe('sanitizeOrder truncation', () => {
   test('truncates a sender longer than MAX_NAME to exactly MAX_NAME characters', () => {
     assert.equal(withSender('A'.repeat(MAX_NAME + 10)), 'A'.repeat(MAX_NAME));

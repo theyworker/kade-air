@@ -41,7 +41,7 @@ describe('generateCode', () => {
     assert.equal(seen.size, 10000);
   });
 
-  test('uses every alphabet character across a large sample, showing no positional bias', () => {
+  test('uses every alphabet character across a large sample', () => {
     const seen = new Set<string>();
     for (let i = 0; i < 5000; i++) for (const ch of generateCode()) seen.add(ch);
     assert.equal(seen.size, CODE_ALPHABET.length);

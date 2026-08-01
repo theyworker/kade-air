@@ -5,6 +5,7 @@ import type { Order } from './order';
 export type OrderCache = {
   get(code: string): Promise<Order | null>;
   set(code: string, order: Order): Promise<void>;
+  del(code: string): Promise<void>;
 };
 
 // Two days. Neon is the source of truth, so this only decides how long a hot
@@ -23,5 +24,9 @@ export const redisCache: OrderCache = {
 
   async set(code, order) {
     await redis().set(key(code), order, { ex: CACHE_TTL_SECONDS });
+  },
+
+  async del(code) {
+    await redis().del(key(code));
   },
 };

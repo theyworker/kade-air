@@ -8,12 +8,27 @@ import { env } from './env';
 let client: Redis | null = null;
 const redis = () => (client ??= new Redis({ url: env.REDIS_URL, token: env.REDIS_TOKEN }));
 
+// Optional tuning knobs, not required configuration — lib/env.ts's requireEnv
+// throws on absence, which is wrong here. A plain process.env read with a
+// numeric fallback lets these be tuned without a deploy.
+const num = (name: string, fallback: number) => {
+  const raw = process.env[name];
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+};
+
+// Sri Lanka's mobile traffic is dominated by carrier-grade NAT, where an
+// entire carrier pool shares one egress IP — a low per-IP ceiling here reads
+// as "kade uncle needs a break" to a lot of innocent people at once.
+const CREATE_PER_HOUR = num('RATE_LIMIT_CREATE_PER_HOUR', 40);
+const READ_PER_MINUTE = num('RATE_LIMIT_READ_PER_MINUTE', 120);
+
 // Creation writes a permanent row, so it is the expensive one to leave open.
 let creationLimiter: Ratelimit | null = null;
 export const createLimiter = () =>
   (creationLimiter ??= new Ratelimit({
     redis: redis(),
-    limiter: Ratelimit.slidingWindow(10, '1 h'),
+    limiter: Ratelimit.slidingWindow(CREATE_PER_HOUR, '1 h'),
     prefix: 'rl:create',
     analytics: false,
   }));
@@ -24,7 +39,7 @@ let readingLimiter: Ratelimit | null = null;
 export const readLimiter = () =>
   (readingLimiter ??= new Ratelimit({
     redis: redis(),
-    limiter: Ratelimit.slidingWindow(120, '1 m'),
+    limiter: Ratelimit.slidingWindow(READ_PER_MINUTE, '1 m'),
     prefix: 'rl:read',
     analytics: false,
   }));

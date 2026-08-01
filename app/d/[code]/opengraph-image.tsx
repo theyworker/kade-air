@@ -23,7 +23,13 @@ function pngUri(publicPath: string): Promise<string> {
     cached = sharp(path.join(process.cwd(), 'public', publicPath))
       .png()
       .toBuffer()
-      .then((png) => `data:image/png;base64,${png.toString('base64')}`);
+      .then((png) => `data:image/png;base64,${png.toString('base64')}`)
+      .catch((err) => {
+        // Don't memoize a failure — a transient sharp error would otherwise break
+        // this card for the life of the instance.
+        transcodes.delete(publicPath);
+        throw err;
+      });
     transcodes.set(publicPath, cached);
   }
   return cached;

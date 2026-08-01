@@ -24,7 +24,13 @@ export async function createOrderAction(input: Order): Promise<CreateOrderResult
     const code = await createOrder(input);
     return { ok: true, code };
   } catch (err) {
-    console.error('[kade-air] order creation failed', err);
+    // Not the raw driver error — its `detail` field can echo offending column
+    // values, and getting PII out of logs was this change's whole point.
+    console.error(
+      '[kade-air] order creation failed',
+      err instanceof Error ? err.message : err,
+      (err as { code?: string })?.code,
+    );
     return { ok: false, reason: 'failed' };
   }
 }

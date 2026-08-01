@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { preload } from 'react-dom';
 import { MENU_ART, findDish } from '@/lib/dishes';
 import type { Order } from '@/lib/order';
@@ -45,10 +45,6 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
   // menu paints from cache instead of loading 30 thumbnails in front of you.
   usePrefetchImages(MENU_ART, { enabled: screen === 'home' });
 
-  // Once a dish is picked the reveal art is inevitable — start it now rather
-  // than waiting for the flight to mount and race it.
-  if (screen !== 'home' && screen !== 'menu') preload(dish.high, { as: 'image' });
-
   const order = { dishId, sender, recipient, message, chain };
 
   // What the link actually points at. Frozen when the order is accepted, because
@@ -66,8 +62,20 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
   const shown = placed?.order ?? order;
   const shownDish = findDish(shown.dishId);
 
+  // Once a dish is picked the reveal art is inevitable — start it now rather
+  // than waiting for the flight to mount and race it. Post-submission screens
+  // render shownDish, not the live dish, so that is what must be preloaded.
+  if (screen !== 'home' && screen !== 'menu') preload(shownDish.high, { as: 'image' });
+
+  // Guards against a double-click racing two submitOrder calls: React state
+  // updates asynchronously, so two clicks milliseconds apart can both observe
+  // `submitting === false` before either setSubmitting(true) commits. A ref is
+  // read and set synchronously, closing that window.
+  const submittingRef = useRef(false);
+
   const submitOrder = async () => {
-    if (submitting) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setSubmitError(null);
 
@@ -81,6 +89,7 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
       result = { ok: false, reason: 'failed' };
     } finally {
       setSubmitting(false);
+      submittingRef.current = false;
     }
 
     if (result.ok) {

@@ -9,8 +9,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx --test test/code.test.ts test/dishes.test.ts test/flight.test.ts test/order.test.ts test/orders.test.ts test/ua.test.ts",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "test": "tsx --test test/code.test.ts test/dishes.test.ts test/flight.test.ts test/order.test.ts test/orders.test.ts test/ratelimit.test.ts test/ua.test.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:revoke": "tsx scripts/revoke.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

@@ -7,6 +7,7 @@ export type StoredOrder = Order & { code: string; revokedAt: Date | null };
 export type OrderStore = {
   insert(row: Order & { code: string }): Promise<void>;
   findByCode(code: string): Promise<StoredOrder | null>;
+  revoke(code: string): Promise<void>;
 };
 
 // Thrown when the generated code collided with an existing primary key.
@@ -59,5 +60,9 @@ export const neonStore: OrderStore = {
       chain: row.chain as number,
       revokedAt: row.revoked_at ? new Date(row.revoked_at as string) : null,
     };
+  },
+
+  async revoke(code) {
+    await sql()`update orders set revoked_at = now() where code = ${code}`;
   },
 };
