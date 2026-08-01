@@ -15,7 +15,7 @@ import type { MetadataRoute } from 'next';
 //     strip the preview card off every shared link.
 //
 // The real protection is `robots: { index: false, follow: false }` in
-// app/d/[token]/page.tsx, which emits <meta name="robots" content="noindex,
+// app/d/[code]/page.tsx, which emits <meta name="robots" content="noindex,
 // nofollow"> on every delivery page. Crawlers may fetch it (so previews keep
 // working) and are told in the clearest available terms not to index it.
 export default function robots(): MetadataRoute.Robots {
