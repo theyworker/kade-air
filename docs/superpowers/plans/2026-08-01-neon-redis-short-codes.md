@@ -333,7 +333,7 @@ export const MAX_NAME = 24;
 export const MAX_MESSAGE = 140;
 
 export const clean = (s: string, max: number) =>
-  s.replace(/[ -]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+  s.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 
 const clampChain = (n: number) => Math.min(9999, Math.max(1, Math.round(n) || 1));
 
@@ -382,11 +382,11 @@ const withChain = (chain: number) => sanitizeOrder({ ...base, chain }).chain;
 
 describe('sanitizeOrder cleaning', () => {
   test('replaces control characters with a space and collapses resulting whitespace', () => {
-    assert.equal(withSender('A B'), 'A B');
+    assert.equal(withSender('A\x00B'), 'A B');
   });
 
   test('replaces the DEL control character (\\x7f) with a space, not just \\x00', () => {
-    assert.equal(withSender('AB'), 'A B');
+    assert.equal(withSender('A\x7fB'), 'A B');
   });
 
   test('collapses runs of internal whitespace to a single space', () => {
@@ -699,7 +699,7 @@ describe('createOrder', () => {
   test('sanitizes input before storing it', async () => {
     const { store, rows } = fakeStore();
     const { cache } = fakeCache();
-    const dirty = { ...anOrder, sender: '  Dev aka  ', chain: 99999 };
+    const dirty = { ...anOrder, sender: '  Dev\x00aka  ', chain: 99999 };
     await createOrder(dirty, { store, cache, newCode: () => 'CCCCCCCC' });
     assert.equal(rows.get('CCCCCCCC')?.sender, 'Dev aka');
     assert.equal(rows.get('CCCCCCCC')?.chain, 9999);
@@ -835,7 +835,7 @@ describe('getOrder', () => {
   test('sanitizes rows on the way out, since stored data is still untrusted input', async () => {
     const { store, rows } = fakeStore();
     const { cache } = fakeCache();
-    rows.set('DIRTY000', stored('DIRTY000', { sender: '  Dev aka  ' }));
+    rows.set('DIRTY000', stored('DIRTY000', { sender: '  Dev\x00aka  ' }));
     const found = await getOrder('DIRTY000', { store, cache });
     assert.equal(found?.sender, 'Dev aka');
   });
