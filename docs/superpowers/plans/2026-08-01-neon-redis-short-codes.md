@@ -1056,7 +1056,17 @@ git commit -m "Add rate limiting and the order creation action"
 - Consumes: `getOrder` from `lib/orders.ts`; `readLimiter`, `clientIp` from `lib/ratelimit.ts`
 - Produces: nothing consumed by later tasks
 
-**Context:** Two behaviours from the spec land here and are easy to lose. First, `getOrder` is wrapped in React's `cache()` so `generateMetadata` and the page component share one lookup per render. Second, the OG image's fallback card must send `no-store`, or a Neon outage poisons the CDN with a generic card against that URL essentially forever.
+**Context:** Three behaviours from the spec land here and are easy to lose.
+
+1. `getOrder` is wrapped in React's `cache()` so `generateMetadata` and the page component share one lookup per render.
+2. The OG image's fallback card must send `no-store`, or a Neon outage poisons the CDN with a generic card against that URL essentially forever.
+3. **The read path must be rate limited.** The spec's accepted-risk argument for an 8-character code depends on this explicitly — without it, the enumeration ceiling the spec claims does not exist. Both the page and the OG image route check `readLimiter()` before doing any work, so a client grinding through codes stops costing Neon reads and Satori renders. At 120/minute a real recipient (1-3 requests) never comes near it.
+
+**Rate-limiting rules for this task, both routes:**
+
+- The limiter call **fails open**. If Redis is unreachable, log and serve the request. A limiter outage must never take the delivery page down — same rule as everywhere else in this plan.
+- Over-quota returns the **same `BrokenLink` screen a genuinely dead code returns**. Do not invent a new screen and do not tell the client they were limited; there is nothing to gain by confirming it, and it keeps the response shape uniform.
+- The check happens **before** `loadOrder`, so an over-quota request costs no database read.
 
 - [ ] **Step 1: Move the route directory**
 
@@ -1076,6 +1086,7 @@ import BrokenLink from '@/components/BrokenLink';
 import { findDish } from '@/lib/dishes';
 import { getOrder } from '@/lib/orders';
 import { senderDisplay } from '@/lib/order';
+import { clientIp, readLimiter } from '@/lib/ratelimit';
 import { isDesktopUA } from '@/lib/ua';
 
 type Props = { params: Promise<{ code: string }> };
@@ -1083,6 +1094,23 @@ type Props = { params: Promise<{ code: string }> };
 // generateMetadata and the page component both need the order, and both run in
 // one render pass. React's cache() collapses that into a single lookup.
 const loadOrder = cache(getOrder);
+
+/**
+ * True when this client may proceed.
+ *
+ * Short codes are only as safe as the ceiling on guessing them, so the read
+ * path is limited as well as creation. Fails OPEN: if Redis is unreachable we
+ * serve the delivery rather than punish a recipient for our outage.
+ */
+async function mayRead(ip: string): Promise<boolean> {
+  try {
+    const { success } = await readLimiter().limit(ip);
+    return success;
+  } catch (err) {
+    console.error('[kade-air] read limiter unavailable, allowing request', err);
+    return true;
+  }
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { code } = await params;
@@ -1110,6 +1138,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function DeliveryPage({ params }: Props) {
   const [{ code }, h] = await Promise.all([params, headers()]);
 
+  // Checked before the lookup, so a client grinding through codes stops costing
+  // database reads. Over-quota gets the same screen a dead code gets — there is
+  // nothing to gain by confirming to a guesser that they were throttled.
+  if (!(await mayRead(clientIp(h)))) return <BrokenLink />;
+
   // A missing order and an unreachable database are different problems and get
   // different screens: BrokenLink says "this link is dead", which would be a lie
   // during an outage. Let a thrown error reach app/error.tsx instead.
@@ -1131,10 +1164,12 @@ Keep the entire JSX card exactly as it is today. Change only the data source, th
 ```tsx
 import path from 'node:path';
 import { ImageResponse } from 'next/og';
+import { headers } from 'next/headers';
 import sharp from 'sharp';
 import { findDish } from '@/lib/dishes';
 import { getOrder } from '@/lib/orders';
 import { senderDisplay } from '@/lib/order';
+import { clientIp, readLimiter } from '@/lib/ratelimit';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
@@ -1159,8 +1194,19 @@ function pngUri(publicPath: string): Promise<string> {
 }
 
 export default async function Image({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = await params;
-  const order = await getOrder(code).catch(() => null);
+  const [{ code }, h] = await Promise.all([params, headers()]);
+
+  // This route is the expensive one — a Satori render per uncached request —
+  // so it is limited too, before any lookup or render work. Fails open: a
+  // limiter outage must not strip the preview card off every shared link.
+  let allowed = true;
+  try {
+    allowed = (await readLimiter().limit(clientIp(h))).success;
+  } catch (err) {
+    console.error('[kade-air] read limiter unavailable, allowing request', err);
+  }
+
+  const order = allowed ? await getOrder(code).catch(() => null) : null;
 
   const dish = findDish(order?.dishId ?? 'kottu');
   const sender = order ? senderDisplay(order) : 'Someone';
@@ -1197,12 +1243,19 @@ Expected: PASS for the first time since Task 3 — unless `components/CreateFlow
 Run: `grep -rn "\[token\]" --include="*.ts" --include="*.tsx" app components lib`
 Expected: no matches. (`app/robots.ts` refers to `/d/*/opengraph-image`, which is a URL pattern and stays correct.)
 
-- [ ] **Step 6: Run the tests**
+- [ ] **Step 6: Verify the read limiter is actually wired**
+
+Run: `grep -rn "readLimiter" --include="*.tsx" app/d`
+Expected: a match in **both** `app/d/[code]/page.tsx` and `app/d/[code]/opengraph-image.tsx`.
+
+This step exists because an earlier revision of this plan declared `readLimiter` in Task 7's Consumes list and then never called it, which would have left the spec's accepted-risk argument for 8-character codes unimplemented while appearing complete. Confirm by reading, not just by grep, that each call site happens **before** any `getOrder` call and that each one fails open.
+
+- [ ] **Step 7: Run the tests**
 
 Run: `npm test`
 Expected: unchanged from Task 5.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add app/d
