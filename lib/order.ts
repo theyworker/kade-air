@@ -1,8 +1,9 @@
-// An order is fully encoded in its share link token — no database needed.
-// The token is base64url(JSON) so the server can render OG tags and the
-// OG image for any link without a lookup.
+// An order is a row in Postgres, addressed by a short share code. This module
+// owns the shape of an order and the rules for cleaning one — it deliberately
+// knows nothing about storage.
 
 import { DEFAULT_MESSAGE } from './messages';
+import { DISHES } from './dishes';
 
 export type Order = {
   dishId: string;
@@ -15,46 +16,26 @@ export type Order = {
 export const MAX_NAME = 24;
 export const MAX_MESSAGE = 140;
 
-const clean = (s: string, max: number) =>
+export const clean = (s: string, max: number) =>
   s.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 
-function toBase64Url(bytes: Uint8Array): string {
-  let bin = '';
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
+const clampChain = (n: number) => Math.min(9999, Math.max(1, Math.round(n) || 1));
 
-function fromBase64Url(s: string): Uint8Array {
-  const b64 = s.replace(/-/g, '+').replace(/_/g, '/');
-  const bin = atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4));
-  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
-}
-
-export function encodeOrder(order: Order): string {
-  const payload = {
-    d: order.dishId,
-    s: clean(order.sender, MAX_NAME),
-    r: clean(order.recipient, MAX_NAME),
-    m: clean(order.message, MAX_MESSAGE),
-    c: Math.min(9999, Math.max(1, Math.round(order.chain) || 1)),
+// The validation gate on everything entering the database. Applied on write,
+// and again on read, because a row written by an older version of this code is
+// input we did not validate under today's rules.
+export function sanitizeOrder(input: Order): Order {
+  return {
+    // A Server Action's TypeScript signature is erased at runtime, so dishId
+    // is attacker-controlled input. Anything not a real dish id falls back to
+    // the default rather than being stored — this also caps its length,
+    // since DISHES.some() rejects anything oversized outright.
+    dishId: DISHES.some((d) => d.id === input.dishId) ? input.dishId : DISHES[0].id,
+    sender: clean(input.sender ?? '', MAX_NAME),
+    recipient: clean(input.recipient ?? '', MAX_NAME),
+    message: clean(input.message ?? '', MAX_MESSAGE),
+    chain: clampChain(Number(input.chain)),
   };
-  return toBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
-}
-
-export function decodeOrder(token: string): Order | null {
-  try {
-    const raw = JSON.parse(new TextDecoder().decode(fromBase64Url(token)));
-    if (typeof raw !== 'object' || raw === null || typeof raw.d !== 'string') return null;
-    return {
-      dishId: raw.d,
-      sender: clean(String(raw.s ?? ''), MAX_NAME),
-      recipient: clean(String(raw.r ?? ''), MAX_NAME),
-      message: clean(String(raw.m ?? ''), MAX_MESSAGE),
-      chain: Math.min(9999, Math.max(1, Math.round(Number(raw.c)) || 1)),
-    };
-  } catch {
-    return null;
-  }
 }
 
 export const senderDisplay = (o: Pick<Order, 'sender'>) => o.sender.trim() || 'a secret machan';

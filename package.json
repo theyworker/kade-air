@@ -2,12 +2,22 @@
   "name": "kade-air",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "tsx --test test/code.test.ts test/dishes.test.ts test/flight.test.ts test/order.test.ts test/orders.test.ts test/ratelimit.test.ts test/ua.test.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:revoke": "tsx scripts/revoke.ts",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.1",
     "next": "^15.3.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -17,6 +27,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "tsx": "^4.23.1",
     "typescript": "^5"
   }
 }
