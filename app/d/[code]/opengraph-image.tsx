@@ -1,20 +1,55 @@
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ImageResponse } from 'next/og';
 import { headers } from 'next/headers';
 import sharp from 'sharp';
-import { findDish } from '@/lib/dishes';
 import { getOrder } from '@/lib/orders';
 import { senderDisplay } from '@/lib/order';
 import { clientIp, readLimiter } from '@/lib/ratelimit';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
-export const alt = 'AirKade — a friend sent you food by drone';
+export const alt = 'AirKade — a friend sent you a surprise by drone';
 
-// Satori won't fetch by URL and can't decode WebP, so site artwork is
-// transcoded to PNG and inlined. The result for a given file is identical on
-// every request, so it is computed once per warm instance rather than per
-// request — this used to be the single most expensive thing in the route.
+// The card deliberately does NOT show which dish was sent — it is a wrapped
+// gift and "a surprise". Opening the link is the reveal, so the preview must
+// not spoil it. That is why nothing here reads dish data.
+
+// Ink, and the four medallion palettes from the design. The palette is chosen
+// per share code rather than per dish: it keeps consecutive links looking
+// different without leaking anything about what is inside.
+const INK = '#372a54';
+const GIFT_INK = '#1e1442';
+
+const PALETTES = [
+  { bg: '#ffd9a8', medallion: 'radial-gradient(circle at 42% 34%, #ffe9c9, #ffcf95)' },
+  { bg: '#bfe3ff', medallion: 'radial-gradient(circle at 42% 34%, #ddf1ff, #a9d6fb)' },
+  { bg: '#c7ecd8', medallion: 'radial-gradient(circle at 42% 34%, #e3f7ec, #a9dcc2)' },
+  { bg: '#ffd3de', medallion: 'radial-gradient(circle at 42% 34%, #ffe6ec, #ffbccd)' },
+];
+
+/**
+ * Stable per code, so a link's card never changes between fetches.
+ *
+ * FNV-1a with an avalanche step rather than the usual `hash * 31`: the palette
+ * count is a power of two, so a weak mixer leaves the choice riding on the last
+ * character or two and visually similar codes collide.
+ */
+function paletteFor(code: string) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < code.length; i++) {
+    hash ^= code.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x2545f491);
+  hash ^= hash >>> 15;
+  return PALETTES[(hash >>> 0) % PALETTES.length];
+}
+
+// Satori won't fetch by URL and can't decode WebP, so the logo is transcoded to
+// PNG and inlined. Identical on every request, so it is computed once per warm
+// instance — this used to be the single most expensive thing in the route.
 const transcodes = new Map<string, Promise<string>>();
 
 function pngUri(publicPath: string): Promise<string> {
@@ -35,6 +70,23 @@ function pngUri(publicPath: string): Promise<string> {
   return cached;
 }
 
+// Satori cannot use webfonts loaded by CSS; it needs the bytes. Vendored rather
+// than fetched at render time so the card never depends on a network call, and
+// memoized for the same reason the logo is.
+const fonts = new Map<string, Promise<Buffer>>();
+
+function fontData(file: string): Promise<Buffer> {
+  let cached = fonts.get(file);
+  if (!cached) {
+    cached = readFile(path.join(process.cwd(), 'assets', 'fonts', file)).catch((err) => {
+      fonts.delete(file);
+      throw err;
+    });
+    fonts.set(file, cached);
+  }
+  return cached;
+}
+
 export default async function Image({ params }: { params: Promise<{ code: string }> }) {
   const [{ code }, h] = await Promise.all([params, headers()]);
 
@@ -49,12 +101,13 @@ export default async function Image({ params }: { params: Promise<{ code: string
   }
 
   const order = allowed ? await getOrder(code).catch(() => null) : null;
-
-  const dish = findDish(order?.dishId ?? 'kottu');
   const sender = order ? senderDisplay(order) : 'Someone';
-  const [logo, art] = await Promise.all([
+  const { bg, medallion } = paletteFor(code);
+
+  const [logo, fredoka, quicksand] = await Promise.all([
     pngUri('brand/airkade-logo.webp'),
-    pngUri(dish.low.replace(/^\//, '')),
+    fontData('Fredoka-Bold.ttf'),
+    fontData('Quicksand-Bold.ttf'),
   ]);
 
   // A resolved card is immutable and can be cached hard. The fallback card is
@@ -72,60 +125,211 @@ export default async function Image({ params }: { params: Promise<{ code: string
     (
       <div
         style={{
+          position: 'relative',
           width: '100%',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
-          padding: 60,
-          background: 'linear-gradient(180deg, #8ed0f7 0%, #c8e9fb 55%, #ffedc2 100%)',
-          fontFamily: 'sans-serif',
+          gap: 70,
+          padding: '0 86px',
+          background: bg,
+          fontFamily: 'Quicksand',
         }}
       >
+        {/* daylight wash */}
         <div
           style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: 1200,
+            height: 630,
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0) 62%)',
+          }}
+        />
+        {/* two Colombo blocks on the skyline */}
+        <div
+          style={{
+            position: 'absolute',
+            right: 344,
+            bottom: 74,
+            width: 150,
+            height: 230,
+            background: 'rgba(55,42,84,0.08)',
+            borderRadius: '22px 22px 0 0',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            right: 74,
+            bottom: 74,
+            width: 250,
+            height: 150,
+            background: 'rgba(55,42,84,0.10)',
+            borderRadius: '26px 26px 0 0',
+          }}
+        />
+        {/* ground */}
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            bottom: 0,
+            width: 1200,
+            height: 74,
+            background: 'linear-gradient(#8ccb62, #6fb54a)',
+            borderTop: `4px solid ${INK}`,
+          }}
+        />
+
+        {/* dish medallion — a wrapped gift, never the dish itself */}
+        <div
+          style={{
+            position: 'relative',
             display: 'flex',
+            flexShrink: 0,
+            width: 352,
+            height: 352,
+            borderRadius: 352,
+            background: '#fff',
+            border: `8px solid ${INK}`,
+            boxShadow: `0 14px 0 ${INK}`,
             alignItems: 'center',
-            width: '100%',
-            height: '100%',
-            background: '#fdf6ea',
-            border: '8px solid #372a54',
-            borderRadius: 48,
-            boxShadow: '0 18px 0 #372a54',
-            padding: '48px 64px',
-            gap: 56,
+            justifyContent: 'center',
           }}
         >
           <div
             style={{
+              position: 'absolute',
+              top: 22,
+              left: 22,
+              width: 292,
+              height: 292,
+              borderRadius: 292,
+              background: medallion,
+            }}
+          />
+
+          <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', width: 216 }}>
+            {/* bow */}
+            <div style={{ position: 'relative', display: 'flex', height: 52 }}>
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 56,
+                  top: 6,
+                  width: 52,
+                  height: 36,
+                  background: '#ff7a2f',
+                  border: `6px solid ${GIFT_INK}`,
+                  borderRadius: '26px 26px 4px 26px',
+                  transform: 'rotate(-16deg)',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 108,
+                  top: 6,
+                  width: 52,
+                  height: 36,
+                  background: '#ff7a2f',
+                  border: `6px solid ${GIFT_INK}`,
+                  borderRadius: '26px 26px 26px 4px',
+                  transform: 'rotate(16deg)',
+                }}
+              />
+            </div>
+            {/* lid */}
+            <div
+              style={{
+                display: 'flex',
+                width: 216,
+                height: 44,
+                marginTop: 2,
+                background: '#fbb614',
+                border: `6px solid ${GIFT_INK}`,
+                borderRadius: 10,
+              }}
+            />
+            {/* box */}
+            <div
+              style={{
+                position: 'relative',
+                display: 'flex',
+                width: 190,
+                height: 118,
+                marginTop: -2,
+                marginLeft: 13,
+                background: '#fbb614',
+                border: `6px solid ${GIFT_INK}`,
+                borderRadius: '0 0 12px 12px',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 76,
+                  top: -6,
+                  width: 26,
+                  height: 118,
+                  background: GIFT_INK,
+                }}
+              />
+            </div>
+            {/* ribbon across the lid */}
+            <div
+              style={{
+                position: 'absolute',
+                left: 95,
+                top: 52,
+                width: 26,
+                height: 46,
+                background: GIFT_INK,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* copy */}
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+          <img src={logo} alt="AirKade" width={225} height={150} style={{ marginLeft: -8, marginBottom: 22 }} />
+          <div
+            style={{
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 280,
-              height: 280,
-              borderRadius: 280,
-              background: dish.c,
-              border: '8px solid #372a54',
-              padding: 26,
-              flexShrink: 0,
+              fontFamily: 'Fredoka',
+              fontSize: 86,
+              lineHeight: 0.98,
+              letterSpacing: -2.5,
+              color: INK,
             }}
           >
-            <img src={art} alt="" width={228} height={228} style={{ objectFit: 'contain' }} />
+            {sender} sent you a surprise!
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18, flex: 1, minWidth: 0 }}>
-            <img src={logo} alt="AirKade" width={186} height={124} />
-            <div style={{ display: 'flex', fontSize: 54, fontWeight: 700, color: '#372a54', lineHeight: 1.08 }}>
-              {sender} sent you {dish.name}!
-            </div>
-            <div style={{ display: 'flex', fontSize: 30, fontWeight: 600, color: '#6d5f8e' }}>
-              Tap to watch the drone fly over Colombo
-            </div>
-            <div style={{ display: 'flex', fontSize: 24, fontWeight: 600, color: '#a394c2' }}>
-              100% fake · 100% free · 0 calories
-            </div>
+          <div
+            style={{
+              display: 'flex',
+              marginTop: 26,
+              fontFamily: 'Quicksand',
+              fontSize: 32,
+              lineHeight: 1.3,
+              color: '#6d5f8e',
+            }}
+          >
+            Tap to watch your delivery arrive.
           </div>
         </div>
       </div>
     ),
-    { ...size, emoji: 'twemoji', headers: responseHeaders },
+    {
+      ...size,
+      emoji: 'twemoji',
+      headers: responseHeaders,
+      fonts: [
+        { name: 'Fredoka', data: fredoka, weight: 700, style: 'normal' },
+        { name: 'Quicksand', data: quicksand, weight: 700, style: 'normal' },
+      ],
+    },
   );
 }

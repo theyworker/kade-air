@@ -57,15 +57,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Kade Air — this link went stale', robots: { index: false, follow: false } };
   }
 
-  const dish = findDish(order.dishId);
-  const title = `${dish.emoji} ${senderDisplay(order)} sent you ${dish.name}!`;
-  const description = 'Your delivery is on the way. Tap to watch the drone fly it over Colombo.';
+  // The dish is deliberately absent from both the title and the card. Opening
+  // the link is the reveal, and a preview naming the food spoils it before the
+  // recipient has tapped anything.
+  const title = `${senderDisplay(order)} sent you a surprise!`;
+  const description = 'Your delivery is on the way. Tap to watch your delivery arrive.';
 
   return {
     title,
     description,
-    // Titles carry real names ("Devaka sent you Kottu!"). Never index these —
-    // robots.txt intentionally permits the fetch so previews still render.
+    // Titles carry real names ("Devaka sent you a surprise!"). Never index these
+    // — robots.txt intentionally permits the fetch so previews still render.
     robots: { index: false, follow: false },
     openGraph: { title, description, type: 'website', url: `/d/${code}`, siteName: 'Kade Air' },
     twitter: { card: 'summary_large_image', title, description },
