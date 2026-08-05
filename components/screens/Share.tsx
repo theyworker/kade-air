@@ -16,7 +16,9 @@ type Props = {
 export default function Share({ dish, senderDisplay, recipientDisplay, link, onBack, onPreview }: Props) {
   const [copied, setCopied] = useState(false);
   const displayLink = link.replace(/^https?:\/\//, '');
-  const shareText = `Ado! I sent you ${dish.name} ${dish.emoji} (kind of) → ${link}`;
+  // Deliberately generic: opening the link is the reveal, so the dish stays out
+  // of the shared message the same way it stays out of the link preview.
+  const shareText = `Ado! I sent you a surprise 🚁 (kind of) → ${link}`;
 
   const copyLink = () => {
     try {
