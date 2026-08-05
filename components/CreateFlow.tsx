@@ -9,6 +9,7 @@ import { createOrderAction } from '@/app/actions';
 import type { CreateOrderResult } from '@/app/actions';
 import { useIsDesktop } from '@/lib/useIsDesktop';
 import { usePrefetchImages } from '@/lib/usePrefetchImages';
+import { TOP_COLOR, TOP_COLOR_DESKTOP, useThemeColor, type ScreenName } from '@/lib/useThemeColor';
 import PhoneShell from '@/components/PhoneShell';
 import Landing from '@/components/screens/Landing';
 import Menu from '@/components/screens/Menu';
@@ -23,13 +24,14 @@ import ShareD from '@/components/desktop/ShareD';
 import LoopD from '@/components/desktop/LoopD';
 import TrackScreenD from '@/components/desktop/TrackScreenD';
 
-type Screen = 'home' | 'menu' | 'personalise' | 'share' | 'track' | 'loop';
-
 type Props = { chain?: number; initialDesktop?: boolean };
 
 export default function CreateFlow({ chain = 1, initialDesktop = false }: Props) {
   const desktop = useIsDesktop(initialDesktop);
-  const [screen, setScreen] = useState<Screen>('home');
+  const [screen, setScreen] = useState<ScreenName>('home');
+
+  // Keep the mobile browser chrome on the colour this screen paints at the top.
+  useThemeColor(desktop ? TOP_COLOR_DESKTOP[screen] : TOP_COLOR[screen], !desktop);
   const [dishId, setDishId] = useState('kottu');
   const [sender, setSender] = useState('');
   const [recipient, setRecipient] = useState('');

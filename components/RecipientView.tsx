@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { findDish } from '@/lib/dishes';
 import { Order, messageDisplay, recipientDisplay, senderDisplay } from '@/lib/order';
 import { useIsDesktop } from '@/lib/useIsDesktop';
+import { TOP_COLOR, TOP_COLOR_DESKTOP, useThemeColor } from '@/lib/useThemeColor';
 import PhoneShell from '@/components/PhoneShell';
 import Loop from '@/components/screens/Loop';
 import TrackScreen from '@/components/track/TrackScreen';
@@ -21,6 +22,9 @@ export default function RecipientView({ order, initialDesktop = false }: Props) 
   const [screen, setScreen] = useState<'track' | 'loop'>('track');
   const [trackKey, setTrackKey] = useState(0);
   const dish = findDish(order.dishId);
+
+  // Keep the mobile browser chrome on the colour this screen paints at the top.
+  useThemeColor(desktop ? TOP_COLOR_DESKTOP[screen] : TOP_COLOR[screen], !desktop);
 
   const onSendAgain = () => router.push(`/?chain=${order.chain + 1}`);
   const onReplay = () => {
