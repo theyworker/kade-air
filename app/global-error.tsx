@@ -15,6 +15,9 @@ export default function GlobalError({ error, reset }: Props) {
 
   return (
     <html lang="en">
+      {/* This route replaces the root layout, so it carries its own title
+          rather than inheriting the one from layout.tsx metadata. */}
+      <title>Air Kade</title>
       <body style={{ margin: 0 }}>
         <ErrorScreen
           headline="Ayyo. Total engine failure."
