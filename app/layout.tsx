@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_SITE_URL ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'),
   ),
-  title: 'Kade Air — send your machan some food',
+  title: 'Air Kade',
   description: '100% fake · 100% free · 0% calories. Watch a drone fly it over Colombo.',
 };
 
