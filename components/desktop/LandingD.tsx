@@ -1,34 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import BrandLogo from '../BrandLogo';
 import { floatArt } from '@/lib/dishes';
-
-// Who you'd send food to, cycled through the headline. Desktop only — the phone
-// headline has no room to hold a line at its widest word.
-const WORDS = [
-  'machan',
-  'friend',
-  'boyfriend',
-  'girlfriend',
-  'wife',
-  'husband',
-  'coworker',
-  'neighbour',
-  'mom',
-  'dad',
-  'sister',
-  'brother',
-];
+import { useRotatingWord } from '@/lib/useRotatingWord';
 
 export default function LandingD({ onStart }: { onStart: () => void }) {
-  // Starts on 'machan' so the server and the first client render agree.
-  const [wordIdx, setWordIdx] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setWordIdx((i) => (i + 1) % WORDS.length), 1800);
-    return () => clearInterval(id);
-  }, []);
+  const word = useRotatingWord();
 
   return (
     <div
@@ -73,7 +50,7 @@ export default function LandingD({ onStart }: { onStart: () => void }) {
           }}
         >
           <span style={{ display: 'block', whiteSpace: 'nowrap' }}>
-            Send your <span style={{ color: '#ff7a2f' }}>{WORDS[wordIdx]}</span>
+            Send your <span style={{ color: '#ff7a2f' }}>{word}</span>
           </span>
           <span style={{ display: 'block' }}>some food.</span>
         </h1>
