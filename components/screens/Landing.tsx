@@ -1,7 +1,12 @@
+'use client';
+
 import BrandLogo from '../BrandLogo';
 import { floatArt } from '@/lib/dishes';
+import { useRotatingWord } from '@/lib/useRotatingWord';
 
 export default function Landing({ onStart }: { onStart: () => void }) {
+  const word = useRotatingWord();
+
   return (
     <div
       style={{
@@ -66,8 +71,24 @@ export default function Landing({ onStart }: { onStart: () => void }) {
         <div style={{ marginBottom: 14 }}>
           <BrandLogo width={206} priority />
         </div>
-        <h1 className="fredoka" style={{ margin: '10px 0 0', fontWeight: 700, fontSize: 46, lineHeight: 1.04, color: '#372a54', letterSpacing: -1 }}>
-          Send your machan some food.
+        {/* The design's 38px holds "Send your neighbour" on one line at its own
+            414px canvas. Real phones go narrower than that, and `.screen` clips
+            rather than scrolls, so the size gives way below ~410px. */}
+        <h1
+          className="fredoka"
+          style={{
+            margin: '10px 0 0',
+            fontWeight: 700,
+            fontSize: 'clamp(28px, 9.2vw, 38px)',
+            lineHeight: 1.04,
+            color: '#372a54',
+            letterSpacing: -1,
+          }}
+        >
+          <span style={{ display: 'block', whiteSpace: 'nowrap' }}>
+            Send your <span style={{ color: '#ff7a2f' }}>{word}</span>
+          </span>
+          <span style={{ display: 'block' }}>some food.</span>
         </h1>
         <p style={{ margin: '14px 0 0', fontSize: 16, fontWeight: 700, color: '#6d5f8e' }}>100% fake · 100% free · 0 calories</p>
         <div style={{ display: 'flex', gap: 10, margin: '20px 0 26px' }}>
