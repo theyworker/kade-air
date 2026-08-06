@@ -104,6 +104,15 @@ export default async function Image({ params }: { params: Promise<{ code: string
   const sender = order ? senderDisplay(order) : 'Someone';
   const { bg, medallion } = paletteFor(code);
 
+  const headline = `${sender} sent you a surprise!`;
+
+  // The design specifies 86px, which fits a short name like "Devin" on two
+  // lines. Names run to MAX_NAME (24), and at 86px that wraps to four lines and
+  // pushes the subline through the ground strip. Step the size down so a long
+  // name gets smaller type instead of a broken card.
+  const headlineSize =
+    headline.length <= 28 ? 86 : headline.length <= 34 ? 74 : headline.length <= 42 ? 62 : 52;
+
   const [logo, fredoka, quicksand] = await Promise.all([
     pngUri('brand/airkade-logo.webp'),
     fontData('Fredoka-Bold.ttf'),
@@ -299,13 +308,13 @@ export default async function Image({ params }: { params: Promise<{ code: string
             style={{
               display: 'flex',
               fontFamily: 'Fredoka',
-              fontSize: 86,
+              fontSize: headlineSize,
               lineHeight: 0.98,
               letterSpacing: -2.5,
               color: INK,
             }}
           >
-            {sender} sent you a surprise!
+            {headline}
           </div>
           <div
             style={{

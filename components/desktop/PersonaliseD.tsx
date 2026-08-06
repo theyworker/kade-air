@@ -1,7 +1,11 @@
+'use client';
+
 import type { Dish } from '@/lib/dishes';
 import DishIcon from '../DishIcon';
 import MessagePicker from '../MessagePicker';
+import RequiredDialog from '../RequiredDialog';
 import { MAX_MESSAGE, MAX_NAME } from '@/lib/order';
+import { useRequiredFields } from '@/lib/useRequiredFields';
 
 type Props = {
   dish: Dish;
@@ -30,8 +34,12 @@ export default function PersonaliseD({
   submitting,
   submitError,
 }: Props) {
+  const required = useRequiredFields({ sender, recipient, message }, onSubmit);
+  const fieldClass = (value: string) => `field-input${required.invalid(value) ? ' invalid' : ''}`;
+
   return (
     <div style={{ minHeight: '100vh', background: '#fdf6ea', animation: 'fadeUp .35s ease' }}>
+      {required.showErrors && <RequiredDialog missing={required.missing} onDismiss={required.dismiss} variant="desktop" />}
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 40px 60px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 30 }}>
           <div onClick={onBack} className="press back-btn" style={{ width: 46, height: 46, borderRadius: 14, fontSize: 22, flex: 'none' }}>
@@ -51,20 +59,22 @@ export default function PersonaliseD({
                 onChange={(e) => onSender(e.target.value)}
                 placeholder="e.g. Susantha"
                 maxLength={MAX_NAME}
-                className="field-input"
+                required
+                aria-invalid={required.invalid(sender)}
+                className={fieldClass(sender)}
                 style={{ padding: '15px 16px', fontSize: 17 }}
               />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-              <label className="field-label" style={{ fontSize: 13 }}>
-                Their name <span style={{ opacity: 0.6, textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
-              </label>
+              <label className="field-label" style={{ fontSize: 13 }}>Their name</label>
               <input
                 value={recipient}
                 onChange={(e) => onRecipient(e.target.value)}
                 placeholder="e.g. Susanthi"
                 maxLength={MAX_NAME}
-                className="field-input"
+                required
+                aria-invalid={required.invalid(recipient)}
+                className={fieldClass(recipient)}
                 style={{ padding: '15px 16px', fontSize: 17 }}
               />
             </div>
@@ -76,7 +86,9 @@ export default function PersonaliseD({
                 placeholder="Bada Pirenna Kanna"
                 rows={3}
                 maxLength={MAX_MESSAGE}
-                className="field-input"
+                required
+                aria-invalid={required.invalid(message)}
+                className={fieldClass(message)}
                 style={{ padding: '15px 16px', fontSize: 17, resize: 'none' }}
               />
               <div className="field-label" style={{ fontSize: 12, letterSpacing: '.06em', marginTop: 8 }}>
@@ -93,7 +105,7 @@ export default function PersonaliseD({
               </div>
             )}
             <div
-              onClick={submitting ? undefined : onSubmit}
+              onClick={submitting ? undefined : required.submit}
               className="press cta"
               style={{
                 position: 'sticky',

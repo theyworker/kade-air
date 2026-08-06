@@ -1,7 +1,11 @@
+'use client';
+
 import type { Dish } from '@/lib/dishes';
 import DishIcon from '../DishIcon';
 import MessagePicker from '../MessagePicker';
+import RequiredDialog from '../RequiredDialog';
 import { MAX_MESSAGE, MAX_NAME } from '@/lib/order';
+import { useRequiredFields } from '@/lib/useRequiredFields';
 
 type Props = {
   dish: Dish;
@@ -30,8 +34,21 @@ export default function Personalise({
   submitting,
   submitError,
 }: Props) {
+  const required = useRequiredFields({ sender, recipient, message }, onSubmit);
+  const fieldClass = (value: string) => `field-input${required.invalid(value) ? ' invalid' : ''}`;
+
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#fdf6ea', animation: 'fadeUp .35s ease' }}>
+    <div
+      style={{
+        position: 'relative',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        background: '#fdf6ea',
+        animation: 'fadeUp .35s ease',
+      }}
+    >
+      {required.showErrors && <RequiredDialog missing={required.missing} onDismiss={required.dismiss} />}
       <div className="screen-head">
         <div onClick={onBack} className="press back-btn">
           ‹
@@ -68,19 +85,21 @@ export default function Personalise({
             onChange={(e) => onSender(e.target.value)}
             placeholder="e.g. Susantha"
             maxLength={MAX_NAME}
-            className="field-input"
+            required
+            aria-invalid={required.invalid(sender)}
+            className={fieldClass(sender)}
           />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label className="field-label">
-            Their name <span style={{ opacity: 0.6, textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
-          </label>
+          <label className="field-label">Their name</label>
           <input
             value={recipient}
             onChange={(e) => onRecipient(e.target.value)}
             placeholder="e.g. Susanthi"
             maxLength={MAX_NAME}
-            className="field-input"
+            required
+            aria-invalid={required.invalid(recipient)}
+            className={fieldClass(recipient)}
           />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -91,7 +110,9 @@ export default function Personalise({
             placeholder="Bada Pirenna Kanna"
             rows={3}
             maxLength={MAX_MESSAGE}
-            className="field-input"
+            required
+            aria-invalid={required.invalid(message)}
+            className={fieldClass(message)}
             style={{ resize: 'none' }}
           />
           <div className="field-label" style={{ fontSize: 11, marginTop: 8 }}>
@@ -111,7 +132,7 @@ export default function Personalise({
           </div>
         )}
         <div
-          onClick={submitting ? undefined : onSubmit}
+          onClick={submitting ? undefined : required.submit}
           className="press cta"
           style={{
             background: submitting ? '#8ab5b1' : '#17a398',

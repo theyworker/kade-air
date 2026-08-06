@@ -60,10 +60,10 @@ export default function LandingD({ onStart }: { onStart: () => void }) {
           className="press cta"
           style={{ alignSelf: 'flex-start', background: '#ff7a2f', fontSize: 24, padding: '18px 42px' }}
         >
-          Ado, send food →
+          Send food
         </div>
         <p style={{ margin: '20px 0 0', fontSize: 13, fontWeight: 600, color: '#a394c2', fontStyle: 'italic' }}>
-          nothing arrives. that&apos;s the whole point.
+          Nothing arrives. That&apos;s the whole point
         </p>
       </div>
 

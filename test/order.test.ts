@@ -4,6 +4,7 @@ import {
   MAX_MESSAGE,
   MAX_NAME,
   messageDisplay,
+  missingFields,
   recipientDisplay,
   sanitizeOrder,
   senderDisplay,
@@ -107,6 +108,30 @@ describe('display helpers', () => {
 
   test('messageDisplay returns the message when present', () => {
     assert.equal(messageDisplay({ message: 'Enjoy!' }), 'Enjoy!');
+  });
+});
+
+describe('missingFields', () => {
+  const draft = { sender: 'Devaka', recipient: 'Amma', message: 'Enjoy!' };
+
+  test('returns nothing when every required field is filled', () => {
+    assert.deepEqual(missingFields(draft), []);
+  });
+
+  test('names an empty field by its form label', () => {
+    assert.deepEqual(missingFields({ ...draft, recipient: '' }), ['Their name']);
+  });
+
+  test('treats a whitespace-only field as empty', () => {
+    assert.deepEqual(missingFields({ ...draft, sender: '   ' }), ['Your name']);
+  });
+
+  test('lists every empty field in the order the form shows them', () => {
+    assert.deepEqual(missingFields({ sender: '', recipient: '', message: '' }), [
+      'Your name',
+      'Their name',
+      'Your message',
+    ]);
   });
 });
 

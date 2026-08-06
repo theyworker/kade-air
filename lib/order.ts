@@ -38,6 +38,23 @@ export function sanitizeOrder(input: Order): Order {
   };
 }
 
+// Personalise is a gate, not a suggestion — the drone will not take off with a
+// blank name, recipient or note. The labels here are both the form's labels and
+// what the "can't take off" dialog reads back, so they only exist once.
+export const REQUIRED_FIELDS = [
+  { key: 'sender', label: 'Your name' },
+  { key: 'recipient', label: 'Their name' },
+  { key: 'message', label: 'Your message' },
+] as const;
+
+export type Draft = Pick<Order, 'sender' | 'recipient' | 'message'>;
+
+/** Labels of the still-empty required fields, in the order they appear on the form. */
+export const missingFields = (draft: Draft): string[] =>
+  REQUIRED_FIELDS.filter((f) => !(draft[f.key] ?? '').trim()).map((f) => f.label);
+
+// The display fallbacks below stay: rows written before the fields were required
+// are still out there behind live links, and they have to render as something.
 export const senderDisplay = (o: Pick<Order, 'sender'>) => o.sender.trim() || 'a secret machan';
 export const recipientDisplay = (o: Pick<Order, 'recipient'>) => o.recipient.trim() || 'your machan';
 export const messageDisplay = (o: Pick<Order, 'message'>) => o.message.trim() || DEFAULT_MESSAGE;
