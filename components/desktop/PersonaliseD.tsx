@@ -40,7 +40,8 @@ export default function PersonaliseD({
   return (
     <div style={{ minHeight: '100vh', background: '#fdf6ea', animation: 'fadeUp .35s ease' }}>
       {required.showErrors && <RequiredDialog missing={required.missing} onDismiss={required.dismiss} variant="desktop" />}
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 40px 60px' }}>
+      {/* the sticky CTA holds the bottom, so the page needs no extra tail */}
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 40px 40px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 30 }}>
           <div onClick={onBack} className="press back-btn" style={{ width: 46, height: 46, borderRadius: 14, fontSize: 22, flex: 'none' }}>
             ‹

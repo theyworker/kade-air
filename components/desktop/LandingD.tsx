@@ -1,7 +1,35 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import BrandLogo from '../BrandLogo';
 import { floatArt } from '@/lib/dishes';
 
+// Who you'd send food to, cycled through the headline. Desktop only — the phone
+// headline has no room to hold a line at its widest word.
+const WORDS = [
+  'machan',
+  'friend',
+  'boyfriend',
+  'girlfriend',
+  'wife',
+  'husband',
+  'coworker',
+  'neighbour',
+  'mom',
+  'dad',
+  'sister',
+  'brother',
+];
+
 export default function LandingD({ onStart }: { onStart: () => void }) {
+  // Starts on 'machan' so the server and the first client render agree.
+  const [wordIdx, setWordIdx] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setWordIdx((i) => (i + 1) % WORDS.length), 1800);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div
       style={{
@@ -30,19 +58,24 @@ export default function LandingD({ onStart }: { onStart: () => void }) {
         <div style={{ marginBottom: 18, flex: 'none' }}>
           <BrandLogo width="min(200px,26vh)" priority />
         </div>
+        {/* Smaller than the phone headline on purpose: line one never wraps, so
+            it has to survive the longest word in WORDS. */}
         <h1
           className="fredoka"
           style={{
             margin: 0,
             fontWeight: 700,
-            fontSize: 'clamp(46px,4.6vw,72px)',
-            lineHeight: 1.02,
+            fontSize: 'clamp(34px,3.4vw,54px)',
+            lineHeight: 1.04,
             color: '#372a54',
-            letterSpacing: -1.5,
+            letterSpacing: -1.2,
             textWrap: 'balance',
           }}
         >
-          Send your machan some food.
+          <span style={{ display: 'block', whiteSpace: 'nowrap' }}>
+            Send your <span style={{ color: '#ff7a2f' }}>{WORDS[wordIdx]}</span>
+          </span>
+          <span style={{ display: 'block' }}>some food.</span>
         </h1>
         <p style={{ margin: '20px 0 0', fontSize: 19, fontWeight: 700, color: '#6d5f8e' }}>100% fake · 100% free · 0 calories</p>
         <div style={{ display: 'flex', gap: 14, margin: '18px 0 22px' }}>
