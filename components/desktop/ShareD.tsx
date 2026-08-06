@@ -18,7 +18,7 @@ export default function ShareD({ dish, senderDisplay, recipientDisplay, link, on
   const displayLink = link.replace(/^https?:\/\//, '');
   // Deliberately generic: opening the link is the reveal, so the dish stays out
   // of the shared message the same way it stays out of the link preview.
-  const shareText = `Ado! I sent you a surprise (kind of) → ${link}`;
+  const shareText = `${senderDisplay} has a surprise delivery on the way for you 👀 → ${link}`;
 
   const copyLink = () => {
     try {
