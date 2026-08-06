@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const order = await loadOrder(code).catch(() => null);
 
   if (!order) {
-    return { title: 'Kade Air — this link went stale', robots: { index: false, follow: false } };
+    return { title: 'Air Kade', robots: { index: false, follow: false } };
   }
 
   // The dish is deliberately absent from both the title and the card. Opening

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import ErrorScreen from '@/components/ErrorScreen';
 
 export const metadata = {
-  title: 'Kade Air — wrong address',
+  title: 'Air Kade',
   robots: { index: false, follow: false },
 };
 
