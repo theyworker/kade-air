@@ -8,6 +8,7 @@ import { messageDisplay, recipientDisplay, senderDisplay } from '@/lib/order';
 import { createOrderAction } from '@/app/actions';
 import type { CreateOrderResult } from '@/app/actions';
 import { useIsDesktop } from '@/lib/useIsDesktop';
+import { readSenderName, rememberSenderName } from '@/lib/senderName';
 import { usePrefetchImages } from '@/lib/usePrefetchImages';
 import { TOP_COLOR, TOP_COLOR_DESKTOP, useThemeColor, type ScreenName } from '@/lib/useThemeColor';
 import PhoneShell from '@/components/PhoneShell';
@@ -40,6 +41,15 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
   const [origin, setOrigin] = useState('');
 
   useEffect(() => setOrigin(window.location.origin), []);
+
+  // Pre-fill the sender with whoever sent last from this browser — their own
+  // name after the first order, or the name they were addressed by if they
+  // arrived here by passing the food on. Only fills a blank field, so it never
+  // stomps on something already typed.
+  useEffect(() => {
+    const remembered = readSenderName();
+    if (remembered) setSender((s) => s || remembered);
+  }, []);
 
   const dish = findDish(dishId);
 
@@ -95,6 +105,9 @@ export default function CreateFlow({ chain = 1, initialDesktop = false }: Props)
     }
 
     if (result.ok) {
+      // The order went through under this name — remember it so the next one
+      // pre-fills instead of starting blank.
+      rememberSenderName(sender);
       setPlaced({ code: result.code, order });
       setScreen('share');
       return;

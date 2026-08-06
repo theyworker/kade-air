@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { findDish } from '@/lib/dishes';
 import { Order, messageDisplay, recipientDisplay, senderDisplay } from '@/lib/order';
 import { useIsDesktop } from '@/lib/useIsDesktop';
+import { rememberSenderName } from '@/lib/senderName';
 import { TOP_COLOR, TOP_COLOR_DESKTOP, useThemeColor } from '@/lib/useThemeColor';
 import PhoneShell from '@/components/PhoneShell';
 import Loop from '@/components/screens/Loop';
@@ -26,7 +27,12 @@ export default function RecipientView({ order, initialDesktop = false }: Props) 
   // Keep the mobile browser chrome on the colour this screen paints at the top.
   useThemeColor(desktop ? TOP_COLOR_DESKTOP[screen] : TOP_COLOR[screen], !desktop);
 
-  const onSendAgain = () => router.push(`/?chain=${order.chain + 1}`);
+  const onSendAgain = () => {
+    // Passing it on makes this recipient the next sender. Carry the name they
+    // were addressed by so the create flow signs their order for them.
+    rememberSenderName(order.recipient);
+    router.push(`/?chain=${order.chain + 1}`);
+  };
   const onReplay = () => {
     setTrackKey((k) => k + 1);
     setScreen('track');
