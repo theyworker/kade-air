@@ -166,6 +166,13 @@ input::placeholder, textarea::placeholder { color: #b3a8c9; }
   outline: none;
   box-shadow: 0 3px 0 #372a54;
 }
+/* Only after the drone has refused once — see useRequiredFields. Clears itself
+   as soon as the field has anything in it. */
+.field-input.invalid {
+  border-color: #d93a2b;
+  box-shadow: 0 3px 0 #d93a2b;
+  background: #fff6f4;
+}
 .cta {
   border: 3px solid #372a54;
   border-radius: 20px;

@@ -85,7 +85,7 @@ export default function Landing({ onStart }: { onStart: () => void }) {
           className="press cta"
           style={{ background: '#ff7a2f', fontSize: 22, padding: 18 }}
         >
-          Ado, send food →
+          Send food
         </div>
         <p style={{ textAlign: 'center', margin: '16px 0 0', fontSize: 10, fontWeight: 600, color: '#a394c2', fontStyle: 'italic' }}>
           Nothing arrives. That&apos;s the whole point

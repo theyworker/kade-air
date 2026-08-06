@@ -10,7 +10,7 @@ export default function Menu({ onBack, onSelect }: { onBack: () => void; onSelec
         </div>
         <div>
           <div className="fredoka" style={{ fontWeight: 700, fontSize: 24, color: '#372a54', lineHeight: 1.1 }}>
-            Pick the parcel
+            Pick the item
           </div>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#8a7ba8' }}>all imaginary. all delicious.</div>
         </div>
