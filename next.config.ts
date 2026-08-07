@@ -25,7 +25,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/:dir(food|brand)/:file*",
+        source: "/:dir(food|brand|cam)/:file*",
         headers: [{ key: "Cache-Control", value: ART_CACHE }],
       },
     ];

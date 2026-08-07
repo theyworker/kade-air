@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { preload } from 'react-dom';
 import type { Dish } from '@/lib/dishes';
 import { STATUS_TEXT } from '@/lib/flight';
@@ -8,6 +9,7 @@ import { useWarmImage } from '@/lib/useWarmImage';
 import SpeakerIcon from '../SpeakerIcon';
 import Drone from './Drone';
 import Kitchen from './Kitchen';
+import LiveCam from './LiveCam';
 import Skyline from './Skyline';
 
 type Props = {
@@ -26,6 +28,7 @@ const STEP_LABELS = ['Accepted', 'Preparing', 'Dispatched', 'Delivered'];
 export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msgDisplay, onExit, onLoop, fastMode = false, showTuk = true }: Props) {
   const d = useDelivery(fastMode);
   const { phase, world } = d;
+  const [camFinished, setCamFinished] = useState(false);
 
   // The reveal is a 1254px PNG. preload() starts the download as early as
   // possible; useWarmImage also decodes it, so the final pop paints with no
@@ -199,6 +202,10 @@ export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msg
           );
         })}
       </div>
+
+      {/* live cam: hold to peek at the feed. The clip is shorter than the
+          flight, so it runs out mid-descent and the widget retires itself. */}
+      {!d.revealed && !camFinished && phase !== 'delivered' && <LiveCam airborne={d.airborne} onEnded={() => setCamFinished(true)} />}
 
       {/* full-screen reveal: the food slowly zooms while the note is read */}
       {d.revealed ? (
