@@ -24,6 +24,7 @@ export type Delivery = {
   handoffActive: boolean;
   handoffDur: number;
   parcelAttached: boolean;
+  airborne: boolean;
   shadowVisible: boolean;
   ticketStamped: boolean;
   progressPct: number;
@@ -91,6 +92,8 @@ export function useDelivery(fastMode = false, geometry: FlightGeometry = MOBILE_
     handoffActive: phase === 'dispatched' && world.dispP < 0.5,
     handoffDur: +((D.disp * 0.45) / 1000).toFixed(2),
     parcelAttached: (phase === 'dispatched' && world.dispP >= 0.5) || flying,
+    // shortly after lift-off, once the drone is clear of the kitchen roof
+    airborne: el > D.acc + D.prep + D.disp * 0.75,
     shadowVisible: flying || (phase === 'delivered' && world.visible),
     ticketStamped: el > D.acc * 0.45,
     progressPct: Math.min(100, (el / total) * 100),
