@@ -1,9 +1,10 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createOrder, getOrder, revokeOrder } from '../lib/orders';
+import { createOrder, getOrder, markOpened, revokeOrder } from '../lib/orders';
 import { DuplicateCodeError, type OrderStore, type StoredOrder } from '../lib/db';
 import type { OrderCache } from '../lib/cache';
 import type { Order } from '../lib/order';
+import { UNKNOWN_PLACE, type Place } from '../lib/place';
 
 const anOrder: Order = {
   dishId: 'kottu',
@@ -13,21 +14,27 @@ const anOrder: Order = {
   chain: 1,
 };
 
+const colombo: Place = { label: 'Colombo, WP, LK', timeZone: 'Asia/Colombo' };
+
 const stored = (code: string, over: Partial<StoredOrder> = {}): StoredOrder => ({
   code,
   ...anOrder,
   revokedAt: null,
+  createdAt: new Date('2026-08-07T08:30:00Z'),
+  senderPlace: UNKNOWN_PLACE,
+  openedAt: null,
+  openedPlace: UNKNOWN_PLACE,
   ...over,
 });
 
 function fakeStore(over: Partial<OrderStore> = {}) {
   const rows = new Map<string, StoredOrder>();
-  const calls = { insert: 0, find: 0, revoke: 0 };
+  const calls = { insert: 0, find: 0, revoke: 0, markOpened: 0 };
   const store: OrderStore = {
     async insert(row) {
       calls.insert++;
       if (rows.has(row.code)) throw new DuplicateCodeError(row.code);
-      rows.set(row.code, { ...row, revokedAt: null });
+      rows.set(row.code, { ...stored(row.code), ...row });
     },
     async findByCode(code) {
       calls.find++;
@@ -37,6 +44,14 @@ function fakeStore(over: Partial<OrderStore> = {}) {
       calls.revoke++;
       const row = rows.get(code);
       if (row) rows.set(code, { ...row, revokedAt: new Date() });
+    },
+    // Mirrors the real update's predicate: first open only, never a revoked row.
+    async markOpened(code, place) {
+      calls.markOpened++;
+      const row = rows.get(code);
+      if (!row || row.openedAt || row.revokedAt) return false;
+      rows.set(code, { ...row, openedAt: new Date(), openedPlace: place });
+      return true;
     },
     ...over,
   };
@@ -128,6 +143,43 @@ describe('createOrder', () => {
     assert.equal(code, 'DDDDDDDD');
   });
 
+  test('stores where the sender appeared to be', async () => {
+    const { store, rows } = fakeStore();
+    const { cache } = fakeCache();
+    await createOrder(
+      { ...anOrder, senderPlace: colombo },
+      { store, cache, newCode: () => 'FFFFFFFF' },
+    );
+    assert.deepEqual(rows.get('FFFFFFFF')?.senderPlace, colombo);
+  });
+
+  test('stores an unknown place when there was no estimate, as in local development', async () => {
+    const { store, rows } = fakeStore();
+    const { cache } = fakeCache();
+    await createOrder(anOrder, { store, cache, newCode: () => 'GGGGGGGG' });
+    assert.deepEqual(rows.get('GGGGGGGG')?.senderPlace, UNKNOWN_PLACE);
+  });
+
+  test('sanitizes the place, since it comes from headers nobody validated', async () => {
+    const { store, rows } = fakeStore();
+    const { cache } = fakeCache();
+    await createOrder(
+      { ...anOrder, senderPlace: { label: '  Col\x00ombo  ', timeZone: 'Middle/Earth' } },
+      { store, cache, newCode: () => 'HHHHHHHH' },
+    );
+    assert.deepEqual(rows.get('HHHHHHHH')?.senderPlace, { label: 'Col ombo', timeZone: '' });
+  });
+
+  test('keeps the sender place out of the cache, which only holds what a recipient sees', async () => {
+    const { store } = fakeStore();
+    const { cache, entries } = fakeCache();
+    await createOrder(
+      { ...anOrder, senderPlace: colombo },
+      { store, cache, newCode: () => 'IIIIIIII' },
+    );
+    assert.deepEqual(entries.get('IIIIIIII'), anOrder);
+  });
+
   test('propagates a store failure, because the order was not saved', async () => {
     const { cache } = fakeCache();
     const store: OrderStore = {
@@ -138,6 +190,9 @@ describe('createOrder', () => {
         return null;
       },
       async revoke() {},
+      async markOpened() {
+        return false;
+      },
     };
     await assert.rejects(() => createOrder(anOrder, { store, cache }), /neon down/);
   });
@@ -222,6 +277,9 @@ describe('getOrder', () => {
         throw new Error('neon down');
       },
       async revoke() {},
+      async markOpened() {
+        return false;
+      },
     };
     await assert.rejects(() => getOrder('ANYCODE0', { store, cache }), /neon down/);
   });
@@ -240,6 +298,78 @@ describe('getOrder', () => {
     rows.set('DIRTY001', stored('DIRTY001', { sender: '  Dev\x00aka  ' }));
     await getOrder('DIRTY001', { store, cache });
     assert.equal(entries.get('DIRTY001')?.sender, 'Dev aka');
+  });
+});
+
+describe('markOpened', () => {
+  test('stamps when the recipient opened it, and where they were', async () => {
+    const { store, rows } = fakeStore();
+    const { cache } = fakeCache();
+    rows.set('OPEN0000', stored('OPEN0000'));
+
+    assert.equal(await markOpened('OPEN0000', colombo, { store, cache }), true);
+
+    const row = rows.get('OPEN0000');
+    assert.ok(row?.openedAt, 'opened_at must be stamped');
+    assert.deepEqual(row?.openedPlace, colombo);
+  });
+
+  test('keeps the first open, so a replay does not overwrite when it landed', async () => {
+    const { store, rows } = fakeStore();
+    const { cache } = fakeCache();
+    rows.set('OPEN0001', stored('OPEN0001'));
+
+    await markOpened('OPEN0001', colombo, { store, cache });
+    const first = rows.get('OPEN0001')?.openedAt;
+
+    const second = await markOpened(
+      'OPEN0001',
+      { label: 'Kandy, CP, LK', timeZone: 'Asia/Colombo' },
+      { store, cache },
+    );
+
+    assert.equal(second, false, 'a later open is not the open that is recorded');
+    assert.equal(rows.get('OPEN0001')?.openedAt, first);
+    assert.deepEqual(rows.get('OPEN0001')?.openedPlace, colombo);
+  });
+
+  test('sanitizes the place on the way in', async () => {
+    const { store, rows } = fakeStore();
+    const { cache } = fakeCache();
+    rows.set('OPEN0002', stored('OPEN0002'));
+    await markOpened(
+      'OPEN0002',
+      { label: 'Col\x00ombo', timeZone: 'Middle/Earth' },
+      { store, cache },
+    );
+    assert.deepEqual(rows.get('OPEN0002')?.openedPlace, { label: 'Col ombo', timeZone: '' });
+  });
+
+  test('records nothing for a code that does not exist', async () => {
+    const { store } = fakeStore();
+    const { cache } = fakeCache();
+    assert.equal(await markOpened('NOSUCH00', colombo, { store, cache }), false);
+  });
+
+  test('records nothing for a revoked order, which was never delivered', async () => {
+    const { store, rows } = fakeStore();
+    const { cache } = fakeCache();
+    rows.set('OPEN0003', stored('OPEN0003', { revokedAt: new Date() }));
+    assert.equal(await markOpened('OPEN0003', colombo, { store, cache }), false);
+    assert.equal(rows.get('OPEN0003')?.openedAt, null);
+  });
+
+  test('leaves the cache alone — an open changes nothing a recipient sees', async () => {
+    const { store, rows } = fakeStore();
+    const { cache, calls, entries } = fakeCache();
+    rows.set('OPEN0004', stored('OPEN0004'));
+    entries.set('OPEN0004', anOrder);
+
+    await markOpened('OPEN0004', colombo, { store, cache });
+
+    assert.equal(calls.del, 0);
+    assert.equal(calls.set, 0);
+    assert.deepEqual(await getOrder('OPEN0004', { store, cache }), anOrder);
   });
 });
 

@@ -9,8 +9,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx --test test/code.test.ts test/dishes.test.ts test/flight.test.ts test/order.test.ts test/orders.test.ts test/ratelimit.test.ts test/ua.test.ts",
+    "test": "tsx --test test/code.test.ts test/dishes.test.ts test/flight.test.ts test/migrate.test.ts test/order.test.ts test/orders.test.ts test/place.test.ts test/ratelimit.test.ts test/ua.test.ts",
     "db:migrate": "tsx scripts/migrate.ts",
+    "db:order": "tsx scripts/order.ts",
     "db:revoke": "tsx scripts/revoke.ts",
     "smoke": "tsx scripts/smoke.ts"
   },

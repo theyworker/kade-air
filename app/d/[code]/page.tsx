@@ -90,5 +90,7 @@ export default async function DeliveryPage({ params }: Props) {
   preload(dish.low, { as: 'image', fetchPriority: 'high' });
   preload(dish.high, { as: 'image', fetchPriority: 'low' });
 
-  return <RecipientView order={order} initialDesktop={isDesktopUA(h.get('user-agent'))} />;
+  // The code travels with the order so the client can report the open against
+  // it — see recordOpenAction on why that report is not made from here.
+  return <RecipientView code={code} order={order} initialDesktop={isDesktopUA(h.get('user-agent'))} />;
 }

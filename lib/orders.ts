@@ -2,6 +2,17 @@ import { generateCode } from './code';
 import { DuplicateCodeError, neonStore, type OrderStore } from './db';
 import { redisCache, type OrderCache } from './cache';
 import { sanitizeOrder, type Order } from './order';
+import { sanitizePlace, type Place } from './place';
+
+/**
+ * An order as it arrives to be created: the shareable content, plus where the
+ * sender appeared to be when they sent it.
+ *
+ * senderPlace is kept out of Order itself on purpose. Order is what a
+ * recipient sees; this is a note about the sender, and it never travels to a
+ * screen or into the cache.
+ */
+export type NewOrder = Order & { senderPlace?: Place };
 
 export type Deps = {
   store: OrderStore;
@@ -15,14 +26,15 @@ const defaults = (): Deps => ({ store: neonStore, cache: redisCache, newCode: ge
 
 const MAX_CODE_ATTEMPTS = 5;
 
-export async function createOrder(input: Order, deps: Deps = defaults()): Promise<string> {
+export async function createOrder(input: NewOrder, deps: Deps = defaults()): Promise<string> {
   const newCode = deps.newCode ?? generateCode;
   const order = sanitizeOrder(input);
+  const senderPlace = sanitizePlace(input.senderPlace);
 
   for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
     const code = newCode();
     try {
-      await deps.store.insert({ code, ...order });
+      await deps.store.insert({ code, ...order, senderPlace });
     } catch (err) {
       if (err instanceof DuplicateCodeError) continue;
       throw err;
@@ -71,6 +83,28 @@ export async function getOrder(code: string, deps: Deps = defaults()): Promise<O
   }
 
   return order;
+}
+
+/**
+ * Records that the recipient opened the delivery: when, and where they
+ * appeared to be.
+ *
+ * Only the first open is kept — the store's update is written so later opens
+ * match nothing — because the question this answers is when the delivery
+ * landed, not how many times it has been replayed since.
+ *
+ * The cache is deliberately left alone. A cached entry holds only what the
+ * delivery renders, and none of that changes when an order is opened, so
+ * there is nothing here to invalidate.
+ *
+ * Resolves true when this call was the open that got recorded.
+ */
+export async function markOpened(
+  code: string,
+  place: Place,
+  deps: Deps = defaults(),
+): Promise<boolean> {
+  return deps.store.markOpened(code, sanitizePlace(place));
 }
 
 /**

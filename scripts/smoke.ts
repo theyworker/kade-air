@@ -14,10 +14,11 @@
  */
 import { neon } from '@neondatabase/serverless';
 import { Redis } from '@upstash/redis';
-import { createOrder, getOrder, revokeOrder } from '../lib/orders';
+import { createOrder, getOrder, markOpened, revokeOrder } from '../lib/orders';
 import { neonStore, DuplicateCodeError, type OrderStore } from '../lib/db';
 import { redisCache, CACHE_TTL_SECONDS, type OrderCache } from '../lib/cache';
 import { createLimiter, clientIp } from '../lib/ratelimit';
+import { placeFromHeaders, type Place } from '../lib/place';
 import type { Order } from '../lib/order';
 
 // Checked before anything is constructed, so a missing variable produces one
@@ -70,6 +71,21 @@ const sample = (): Order => ({
   chain: 1,
 });
 
+// What the edge would have attached to a request from Colombo. Real headers,
+// parsed by the real parser, so this exercises the path a live request takes.
+const senderPlace: Place = placeFromHeaders(
+  new Headers({
+    'x-vercel-ip-city': 'Colombo',
+    'x-vercel-ip-country-region': 'WP',
+    'x-vercel-ip-country': 'LK',
+    'x-vercel-ip-timezone': 'Asia/Colombo',
+  }),
+);
+
+const openedPlace: Place = placeFromHeaders(
+  new Headers({ 'cf-ipcity': 'Kandy', 'cf-ipcountry': 'LK', 'cf-timezone': 'Asia/Colombo' }),
+);
+
 async function main() {
   console.log('Smoke check against real Neon + Upstash\n' + '='.repeat(46));
 
@@ -80,18 +96,21 @@ async function main() {
       where table_name = 'orders'
     `) as Array<{ column_name: string }>;
     const names = cols.map((c) => c.column_name).sort();
-    const want = ['chain', 'code', 'created_at', 'dish_id', 'message', 'recipient', 'revoked_at', 'sender'];
+    const want = [
+      'chain', 'code', 'created_at', 'dish_id', 'message', 'recipient', 'revoked_at', 'sender',
+      'opened_at', 'opened_location', 'opened_timezone', 'sender_location', 'sender_timezone',
+    ];
     if (names.length === 0) return bad('orders table exists', 'not found — run npm run db:migrate first');
     const missing = want.filter((w) => !names.includes(w));
     missing.length
-      ? bad('all columns present', `missing: ${missing.join(', ')}`)
-      : ok('orders table has all 8 columns');
+      ? bad('all columns present', `missing: ${missing.join(', ')} — run npm run db:migrate`)
+      : ok(`orders table has all ${want.length} columns`);
   });
 
   // ---- 2. Create writes a row and warms the cache with the right TTL -------
   let code = '';
   await step('2. createOrder writes Neon and warms Redis', async () => {
-    code = await createOrder(sample(), deps);
+    code = await createOrder({ ...sample(), senderPlace }, deps);
     written.push(code);
     ok('code minted', code);
 
@@ -151,7 +170,7 @@ async function main() {
   // ---- 4. Duplicate code detection uses the real driver's error ------------
   await step('4. Duplicate code raises DuplicateCodeError (real driver)', async () => {
     try {
-      await neonStore.insert({ code, ...sample() });
+      await neonStore.insert({ code, ...sample(), senderPlace });
       bad('second insert rejects', 'it succeeded — the primary key is not enforcing');
     } catch (err) {
       err instanceof DuplicateCodeError
@@ -163,8 +182,57 @@ async function main() {
     }
   });
 
-  // ---- 5. Revocation, including the cache-hit path -------------------------
-  await step('5. Revocation evicts the cache, not just the row', async () => {
+  // ---- 5. Sender capture and the recipient's open --------------------------
+  await step('5. Sender place stored, first open recorded', async () => {
+    const before = await neonStore.findByCode(code);
+    if (!before) return bad('row readable', 'findByCode returned null');
+
+    before.senderPlace.label === senderPlace.label &&
+    before.senderPlace.timeZone === senderPlace.timeZone
+      ? ok('sender place round-trips through Postgres', before.senderPlace.label)
+      : bad('sender place round-trips through Postgres', JSON.stringify(before.senderPlace));
+
+    // created_at is the sender's timestamp. A row minted seconds ago that
+    // reads as hours old means the column is not what this code thinks it is.
+    const age = Date.now() - before.createdAt.getTime();
+    age >= 0 && age < 5 * 60_000
+      ? ok('created_at is the sender timestamp', before.createdAt.toISOString())
+      : bad('created_at is the sender timestamp', `${Math.round(age / 1000)}s off`);
+
+    before.openedAt === null
+      ? ok('opened_at is null before anyone opens it')
+      : bad('opened_at is null before anyone opens it', String(before.openedAt));
+
+    const first = await markOpened(code, openedPlace, deps);
+    first ? ok('first open recorded') : bad('first open recorded', 'update matched no row');
+
+    const opened = await neonStore.findByCode(code);
+    opened?.openedAt
+      ? ok('opened_at stamped', opened.openedAt.toISOString())
+      : bad('opened_at stamped', 'still null');
+    opened?.openedPlace.label === openedPlace.label
+      ? ok('opened place stored', opened.openedPlace.label)
+      : bad('opened place stored', JSON.stringify(opened?.openedPlace));
+
+    // A replay must not move the moment the delivery landed.
+    const second = await markOpened(code, senderPlace, deps);
+    const after = await neonStore.findByCode(code);
+    !second && after?.openedAt?.getTime() === opened?.openedAt?.getTime()
+      ? ok('a second open leaves the first one alone')
+      : bad(
+          'a second open leaves the first one alone',
+          `returned ${second}, opened_at now ${after?.openedAt?.toISOString()}`,
+        );
+
+    // The cached order must not have grown a field the recipient never sees.
+    const cached = (await redis.get(`order:${code}`)) as Record<string, unknown> | null;
+    cached && !('senderPlace' in cached) && !('openedAt' in cached)
+      ? ok('cache holds only what a recipient sees')
+      : bad('cache holds only what a recipient sees', JSON.stringify(cached));
+  });
+
+  // ---- 6. Revocation, including the cache-hit path -------------------------
+  await step('6. Revocation evicts the cache, not just the row', async () => {
     const live = await getOrder(code, deps);
     if (!live) return bad('order readable before revoke', 'already null');
     const warm = await redis.get(`order:${code}`);
@@ -184,8 +252,8 @@ async function main() {
       : bad('getOrder returns null after revoke', JSON.stringify(after));
   });
 
-  // ---- 6. The create limiter actually trips --------------------------------
-  await step('6. Create rate limiter trips', async () => {
+  // ---- 7. The create limiter actually trips --------------------------------
+  await step('7. Create rate limiter trips', async () => {
     const ip = `smoke-${Date.now()}`;
     const limiter = createLimiter();
     let allowed = 0;

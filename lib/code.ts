@@ -9,6 +9,19 @@
 export const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
 export const CODE_LENGTH = 8;
 
+// The alphabet contains no regex metacharacters, so it drops into a class
+// as-is. Built once, from the same constants generateCode draws on, so the
+// two can never disagree about what a code looks like.
+const CODE_PATTERN = new RegExp(`^[${CODE_ALPHABET}]{${CODE_LENGTH}}$`);
+
+/**
+ * True for a string this app could have minted.
+ *
+ * Cheap enough to run before anything expensive: a value that cannot be a code
+ * is not worth a rate-limiter round trip, let alone a database write.
+ */
+export const isCode = (value: string): boolean => CODE_PATTERN.test(value);
+
 export function generateCode(): string {
   const bytes = new Uint8Array(CODE_LENGTH);
   crypto.getRandomValues(bytes);

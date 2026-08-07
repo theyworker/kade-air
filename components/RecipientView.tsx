@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { recordOpenAction } from '@/app/actions';
 import { findDish } from '@/lib/dishes';
 import { Order, messageDisplay, recipientDisplay, senderDisplay } from '@/lib/order';
 import { useIsDesktop } from '@/lib/useIsDesktop';
@@ -13,16 +14,29 @@ import TrackScreen from '@/components/track/TrackScreen';
 import LoopD from '@/components/desktop/LoopD';
 import TrackScreenD from '@/components/desktop/TrackScreenD';
 
-type Props = { order: Order; initialDesktop?: boolean };
+type Props = { code: string; order: Order; initialDesktop?: boolean };
 
 // What the recipient sees when they open a share link: the delivery
 // plays immediately, then the loop end card nudges them to pass it on.
-export default function RecipientView({ order, initialDesktop = false }: Props) {
+export default function RecipientView({ code, order, initialDesktop = false }: Props) {
   const desktop = useIsDesktop(initialDesktop);
   const router = useRouter();
   const [screen, setScreen] = useState<'track' | 'loop'>('track');
   const [trackKey, setTrackKey] = useState(0);
   const dish = findDish(order.dishId);
+  const reported = useRef(false);
+
+  // This mounting is the delivery being opened — a real browser ran the code,
+  // which a link-preview crawler fetching the page never does. Fire and
+  // forget: the ref keeps StrictMode's second pass in development from sending
+  // it twice, and only the first open is recorded anyway. The catch is for the
+  // call itself failing — the network dropping mid-delivery is not something
+  // the recipient should ever hear about.
+  useEffect(() => {
+    if (reported.current) return;
+    reported.current = true;
+    recordOpenAction(code).catch(() => {});
+  }, [code]);
 
   // Keep the mobile browser chrome on the colour this screen paints at the top.
   useThemeColor(desktop ? TOP_COLOR_DESKTOP[screen] : TOP_COLOR[screen], !desktop);
