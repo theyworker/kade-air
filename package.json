@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx --test test/adminAuth.test.ts test/code.test.ts test/dishes.test.ts test/flight.test.ts test/order.test.ts test/orders.test.ts test/ratelimit.test.ts test/ua.test.ts",
+    "test": "tsx --test test/adminAuth.test.ts test/code.test.ts test/dishes.test.ts test/flight.test.ts test/order.test.ts test/orders.test.ts test/ratelimit.test.ts test/stats.test.ts test/ua.test.ts",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:revoke": "tsx scripts/revoke.ts",
     "smoke": "tsx scripts/smoke.ts"
