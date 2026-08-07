@@ -97,7 +97,11 @@ export type OrderRow = {
   dishId: string;
   sender: string;
   recipient: string;
-  message: string;
+  /**
+   * How long the note is, not what it says. There is deliberately no field
+   * here for the message itself — see getOrdersPage.
+   */
+  messageLength: number;
   chain: number;
   /** already formatted in Colombo time — see below */
   createdAt: string;
@@ -111,11 +115,39 @@ export const PAGE_SIZE = 10;
 /**
  * A page of orders, newest first. `page` is 1-based and clamped into range.
  *
+ * The note people wrote is NOT selected — only its length. Masking it in the
+ * table would have been the easy version and the wrong one: the text would
+ * still travel to the browser inside the RSC payload, one devtools pane away
+ * from being read. A message written to one person is not ours, so it does not
+ * leave Postgres for this page at all. Anything that needs the text (the
+ * delivery page, the revoke script) reads the order by its code, as before.
+ *
  * Timestamps come back pre-formatted as Colombo local time rather than as
  * Dates: the table is rendered on the server first and then re-rendered on the
  * client as pages turn, and a Date formatted with the browser's locale would
  * disagree with itself between those two passes.
  */
+/**
+ * Builds the row the dashboard gets from the row Postgres returned.
+ *
+ * Field by field, never by spread: a spread would carry anything the query
+ * happened to select straight into the payload the browser receives, so the day
+ * someone adds `message` back to that select list, it would ship silently.
+ * Here it cannot — an unlisted column is dropped.
+ */
+export function toOrderRow(r: Record<string, unknown>): OrderRow {
+  return {
+    code: r.code as string,
+    dishId: r.dish_id as string,
+    sender: r.sender as string,
+    recipient: r.recipient as string,
+    messageLength: Number(r.message_length ?? 0),
+    chain: r.chain as number,
+    createdAt: r.created_at as string,
+    revoked: r.revoked as boolean,
+  };
+}
+
 export async function getOrdersPage(page = 1, pageSize = PAGE_SIZE): Promise<OrderPage> {
   const size = Math.min(100, Math.max(1, Math.floor(pageSize) || PAGE_SIZE));
 
@@ -125,7 +157,8 @@ export async function getOrdersPage(page = 1, pageSize = PAGE_SIZE): Promise<Ord
 
   const found = await rows<Record<string, unknown>>(
     `
-    select code, dish_id, sender, recipient, message, chain,
+    select code, dish_id, sender, recipient, chain,
+           char_length(message)                                       as message_length,
            to_char(created_at at time zone '${TZ}', 'DD Mon YYYY, HH24:MI') as created_at,
            revoked_at is not null                                           as revoked
     from orders
@@ -139,15 +172,6 @@ export async function getOrdersPage(page = 1, pageSize = PAGE_SIZE): Promise<Ord
     total,
     page: current,
     pages,
-    rows: found.map((r) => ({
-      code: r.code as string,
-      dishId: r.dish_id as string,
-      sender: r.sender as string,
-      recipient: r.recipient as string,
-      message: r.message as string,
-      chain: r.chain as number,
-      createdAt: r.created_at as string,
-      revoked: r.revoked as boolean,
-    })),
+    rows: found.map(toOrderRow),
   };
 }

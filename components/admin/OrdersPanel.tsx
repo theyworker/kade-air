@@ -59,7 +59,7 @@ export default function OrdersPanel({ initial }: { initial: OrderPage }) {
             All orders
           </div>
           <div style={{ fontSize: 12, fontWeight: 700, color: MUTED, marginTop: 2 }}>
-            {data.total} total · newest first
+            {data.total} total · newest first · notes stay private
           </div>
         </div>
         <button type="button" className="press" style={button} onClick={() => setOpen(false)}>
@@ -84,7 +84,7 @@ export default function OrdersPanel({ initial }: { initial: OrderPage }) {
               <th style={head}>Dish</th>
               <th style={head}>From</th>
               <th style={head}>To</th>
-              <th style={head}>Message</th>
+              <th style={head}>Message (hidden)</th>
               <th style={{ ...head, textAlign: 'right' }}>Chain</th>
             </tr>
           </thead>
@@ -107,18 +107,22 @@ export default function OrdersPanel({ initial }: { initial: OrderPage }) {
                   </td>
                   <td style={cell}>{row.sender || '—'}</td>
                   <td style={cell}>{row.recipient || '—'}</td>
-                  <td
-                    style={{
-                      ...cell,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxWidth: 260,
-                      color: MUTED,
-                    }}
-                    title={row.message}
-                  >
-                    {row.message || '—'}
+                  <td style={{ ...cell, color: MUTED, maxWidth: 260 }}>
+                    {row.messageLength > 0 ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {/* Dots stand in for the note without tracing it: the
+                            run is capped, so a long message and a very long one
+                            look the same. The count beside it is the only
+                            detail, and it is the one that is operationally
+                            useful — spotting a blank note. */}
+                        <span aria-hidden style={{ letterSpacing: 2, color: '#c9bede' }}>
+                          {'•'.repeat(Math.min(12, row.messageLength))}
+                        </span>
+                        <span style={{ fontSize: 11 }}>{row.messageLength} chars</span>
+                      </span>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <td style={{ ...cell, textAlign: 'right' }}>#{row.chain}</td>
                 </tr>
