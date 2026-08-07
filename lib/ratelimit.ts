@@ -44,6 +44,18 @@ export const readLimiter = () =>
     analytics: false,
   }));
 
+// The admin login is the one door in the app behind a password, so it is the
+// one worth guessing at. Two people log in a handful of times a day; ten
+// attempts per ten minutes is generous for them and useless for a dictionary.
+let loginLimiter: Ratelimit | null = null;
+export const adminLoginLimiter = () =>
+  (loginLimiter ??= new Ratelimit({
+    redis: redis(),
+    limiter: Ratelimit.slidingWindow(10, '10 m'),
+    prefix: 'rl:admin',
+    analytics: false,
+  }));
+
 // Vercel populates x-forwarded-for. The first entry is the client; the rest are
 // proxies. Falls back to a constant so a missing header degrades to one shared
 // bucket rather than silently disabling the limiter.
