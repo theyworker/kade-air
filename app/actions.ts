@@ -1,7 +1,7 @@
 'use server';
 
 import { headers } from 'next/headers';
-import { createOrder, markOpened } from '@/lib/orders';
+import { createOrder, recordOpen } from '@/lib/orders';
 import { isCode } from '@/lib/code';
 import { placeFromHeaders } from '@/lib/place';
 import { clientIp, createLimiter, readLimiter } from '@/lib/ratelimit';
@@ -42,13 +42,20 @@ export async function createOrderAction(input: Order): Promise<CreateOrderResult
 }
 
 /**
- * Records that the recipient opened a delivery.
+ * Records one opening of a delivery.
  *
- * Called from the client rather than from the page that renders the delivery,
- * and that is the point: a share link is pasted into chat, and every preview
- * crawler behind it fetches the page. Those fetches would stamp an open the
- * recipient never made. Running this from an effect in the browser means the
- * stamp needs a real client that actually loaded the delivery.
+ * Called at the moment the message actually reaches the recipient — the end of
+ * the flight, when the note is on screen — and not when the page loads. Those
+ * are different events, and only the second one is the delivery landing: a
+ * share link gets pasted into chat, and the preview crawlers behind it fetch
+ * the page without a person ever seeing it. Waiting for the note to appear
+ * means an open needs a real browser that watched the drone come down.
+ *
+ * The cost of that choice: someone who opens the link and leaves before the
+ * delivery finishes is not recorded. They did not get the message either.
+ *
+ * Called again each time the delivery plays through, because watching it again
+ * is opening it again. See lib/orders.ts.
  *
  * Never throws and never reports failure. Nothing on screen depends on the
  * result, and a recipient must not lose their delivery because a write we
@@ -71,7 +78,7 @@ export async function recordOpenAction(code: string): Promise<void> {
   }
 
   try {
-    await markOpened(code, placeFromHeaders(h));
+    await recordOpen(code, placeFromHeaders(h));
   } catch (err) {
     console.error(
       '[kade-air] recording the open failed',

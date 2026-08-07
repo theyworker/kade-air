@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { recordOpenAction } from '@/app/actions';
 import { findDish } from '@/lib/dishes';
@@ -24,17 +24,14 @@ export default function RecipientView({ code, order, initialDesktop = false }: P
   const [screen, setScreen] = useState<'track' | 'loop'>('track');
   const [trackKey, setTrackKey] = useState(0);
   const dish = findDish(order.dishId);
-  const reported = useRef(false);
 
-  // This mounting is the delivery being opened — a real browser ran the code,
-  // which a link-preview crawler fetching the page never does. Fire and
-  // forget: the ref keeps StrictMode's second pass in development from sending
-  // it twice, and only the first open is recorded anyway. The catch is for the
-  // call itself failing — the network dropping mid-delivery is not something
-  // the recipient should ever hear about.
-  useEffect(() => {
-    if (reported.current) return;
-    reported.current = true;
+  // The delivery has landed and the note is on screen — this, not the page
+  // loading, is the open worth recording. A link-preview crawler fetching the
+  // page never gets here; it takes a real browser that watched the drone come
+  // down. Replaying reports again, because watching it again is opening it
+  // again. Fire and forget: the network dropping on a write we keep for
+  // ourselves is not something the recipient should ever hear about.
+  const onDelivered = useCallback(() => {
     recordOpenAction(code).catch(() => {});
   }, [code]);
 
@@ -75,7 +72,12 @@ export default function RecipientView({ code, order, initialDesktop = false }: P
     );
   } else {
     content = desktop ? (
-      <TrackScreenD key={trackKey} dish={dish} onLoop={() => setScreen('loop')} />
+      <TrackScreenD
+        key={trackKey}
+        dish={dish}
+        onLoop={() => setScreen('loop')}
+        onDelivered={onDelivered}
+      />
     ) : (
       <TrackScreen
         key={trackKey}
@@ -84,6 +86,7 @@ export default function RecipientView({ code, order, initialDesktop = false }: P
         recipientDisplay={recipientDisplay(order)}
         msgDisplay={messageDisplay(order)}
         onLoop={() => setScreen('loop')}
+        onDelivered={onDelivered}
       />
     );
   }

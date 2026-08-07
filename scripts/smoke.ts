@@ -14,7 +14,7 @@
  */
 import { neon } from '@neondatabase/serverless';
 import { Redis } from '@upstash/redis';
-import { createOrder, getOrder, markOpened, revokeOrder } from '../lib/orders';
+import { createOrder, getOrder, openingsOf, recordOpen, revokeOrder } from '../lib/orders';
 import { neonStore, DuplicateCodeError, type OrderStore } from '../lib/db';
 import { redisCache, CACHE_TTL_SECONDS, type OrderCache } from '../lib/cache';
 import { createLimiter, clientIp } from '../lib/ratelimit';
@@ -98,13 +98,33 @@ async function main() {
     const names = cols.map((c) => c.column_name).sort();
     const want = [
       'chain', 'code', 'created_at', 'dish_id', 'message', 'recipient', 'revoked_at', 'sender',
-      'opened_at', 'opened_location', 'opened_timezone', 'sender_location', 'sender_timezone',
+      'sender_location', 'sender_timezone',
     ];
     if (names.length === 0) return bad('orders table exists', 'not found — run npm run db:migrate first');
     const missing = want.filter((w) => !names.includes(w));
     missing.length
       ? bad('all columns present', `missing: ${missing.join(', ')} — run npm run db:migrate`)
       : ok(`orders table has all ${want.length} columns`);
+
+    // The single-open columns the log replaced. Left behind, they would be a
+    // second place an open could live.
+    const stale = ['opened_at', 'opened_location', 'opened_timezone'].filter((c) => names.includes(c));
+    stale.length
+      ? bad('the replaced open columns are gone', `still present: ${stale.join(', ')} — run npm run db:migrate`)
+      : ok('the replaced single-open columns are gone from orders');
+
+    const openCols = (await sql`
+      select column_name from information_schema.columns
+      where table_name = 'order_opens'
+    `) as Array<{ column_name: string }>;
+    const openNames = openCols.map((c) => c.column_name).sort();
+    const wantOpens = ['code', 'id', 'location', 'opened_at', 'timezone'];
+    const missingOpens = wantOpens.filter((w) => !openNames.includes(w));
+    openNames.length === 0
+      ? bad('order_opens table exists', 'not found — run npm run db:migrate first')
+      : missingOpens.length
+        ? bad('order_opens has all columns', `missing: ${missingOpens.join(', ')}`)
+        : ok('order_opens table has all 5 columns');
   });
 
   // ---- 2. Create writes a row and warms the cache with the right TTL -------
@@ -182,8 +202,8 @@ async function main() {
     }
   });
 
-  // ---- 5. Sender capture and the recipient's open --------------------------
-  await step('5. Sender place stored, first open recorded', async () => {
+  // ---- 5. Sender capture and the openings log ------------------------------
+  await step('5. Sender place stored, every opening logged', async () => {
     const before = await neonStore.findByCode(code);
     if (!before) return bad('row readable', 'findByCode returned null');
 
@@ -199,30 +219,39 @@ async function main() {
       ? ok('created_at is the sender timestamp', before.createdAt.toISOString())
       : bad('created_at is the sender timestamp', `${Math.round(age / 1000)}s off`);
 
-    before.openedAt === null
-      ? ok('opened_at is null before anyone opens it')
-      : bad('opened_at is null before anyone opens it', String(before.openedAt));
+    const none = await openingsOf(code, deps);
+    none.length === 0
+      ? ok('no openings before anyone opens it')
+      : bad('no openings before anyone opens it', `${none.length} already logged`);
 
-    const first = await markOpened(code, openedPlace, deps);
-    first ? ok('first open recorded') : bad('first open recorded', 'update matched no row');
+    const first = await recordOpen(code, openedPlace, deps);
+    first ? ok('opening recorded') : bad('opening recorded', 'insert matched no row');
 
-    const opened = await neonStore.findByCode(code);
-    opened?.openedAt
-      ? ok('opened_at stamped', opened.openedAt.toISOString())
-      : bad('opened_at stamped', 'still null');
-    opened?.openedPlace.label === openedPlace.label
-      ? ok('opened place stored', opened.openedPlace.label)
-      : bad('opened place stored', JSON.stringify(opened?.openedPlace));
+    // The whole point of a log: a second viewing is a second row, not an
+    // overwrite of the first.
+    const second = await recordOpen(code, senderPlace, deps);
+    second ? ok('a second opening recorded too') : bad('a second opening recorded too', 'insert matched no row');
 
-    // A replay must not move the moment the delivery landed.
-    const second = await markOpened(code, senderPlace, deps);
-    const after = await neonStore.findByCode(code);
-    !second && after?.openedAt?.getTime() === opened?.openedAt?.getTime()
-      ? ok('a second open leaves the first one alone')
+    const logged = await openingsOf(code, deps);
+    logged.length === 2
+      ? ok('both openings kept', `${logged.length} rows`)
+      : bad('both openings kept', `${logged.length} rows, expected 2`);
+
+    logged[0]?.place.label === openedPlace.label && logged[1]?.place.label === senderPlace.label
+      ? ok('openings come back oldest first, each with its own place')
       : bad(
-          'a second open leaves the first one alone',
-          `returned ${second}, opened_at now ${after?.openedAt?.toISOString()}`,
+          'openings come back oldest first, each with its own place',
+          JSON.stringify(logged.map((o) => o.place.label)),
         );
+
+    logged[0] && logged[0].at.getTime() <= (logged[1]?.at.getTime() ?? 0)
+      ? ok('timestamps are ordered', logged[0].at.toISOString())
+      : bad('timestamps are ordered', JSON.stringify(logged.map((o) => o.at)));
+
+    const unknown = await recordOpen('NOSUCH00', openedPlace, deps);
+    unknown === false
+      ? ok('an unknown code logs nothing, and the foreign key never fires')
+      : bad('an unknown code logs nothing', 'it wrote a row');
 
     // The cached order must not have grown a field the recipient never sees.
     const cached = (await redis.get(`order:${code}`)) as Record<string, unknown> | null;
@@ -250,6 +279,13 @@ async function main() {
     after === null
       ? ok('getOrder returns null after revoke')
       : bad('getOrder returns null after revoke', JSON.stringify(after));
+
+    // A revoked link is not readable, so an opening on one would be recording
+    // a delivery that did not happen.
+    const openedAfterRevoke = await recordOpen(code, openedPlace, deps);
+    openedAfterRevoke === false
+      ? ok('a revoked order logs no further openings')
+      : bad('a revoked order logs no further openings', 'it wrote a row');
   });
 
   // ---- 7. The create limiter actually trips --------------------------------
@@ -276,7 +312,11 @@ async function main() {
   console.log('\nCleanup');
   for (const c of written) {
     try {
+      // No delete of order_opens here on purpose: the foreign key cascades,
+      // and a leftover row would mean it does not.
       await sql`delete from orders where code = ${c}`;
+      const orphans = (await sql`select id from order_opens where code = ${c}`) as Array<unknown>;
+      if (orphans.length) console.log(`  WARNING ${c} left ${orphans.length} order_opens rows behind`);
       await redis.del(`order:${c}`);
       console.log(`  removed ${c}`);
     } catch (err) {

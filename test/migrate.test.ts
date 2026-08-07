@@ -33,22 +33,33 @@ describe('db/schema.sql', () => {
     for (const statement of statements(schema)) {
       assert.match(
         statement,
-        /if not exists/i,
+        /if (not )?exists/i,
         `not safe to re-run: ${statement.split('\n').filter((l) => !l.startsWith('--'))[0]}`,
       );
     }
   });
 
-  test('carries the columns the app writes', () => {
-    for (const column of [
-      'sender_location',
-      'sender_timezone',
-      'opened_at',
-      'opened_location',
-      'opened_timezone',
-    ]) {
-      assert.ok(schema.includes(column), `schema is missing ${column}`);
+  test('carries what the app writes', () => {
+    for (const name of ['sender_location', 'sender_timezone', 'order_opens', 'opened_at']) {
+      assert.ok(schema.includes(name), `schema is missing ${name}`);
     }
+  });
+
+  test('drops the single-open columns the log replaced', () => {
+    for (const column of ['opened_at', 'opened_location', 'opened_timezone']) {
+      assert.match(
+        schema,
+        new RegExp(`alter table orders drop column if exists ${column}`),
+        `orders.${column} would survive as a second place an open could live`,
+      );
+    }
+  });
+
+  test('drops those columns after the log exists, not before', () => {
+    const parsed = statements(schema);
+    const created = parsed.findIndex((s) => /create table if not exists order_opens/.test(s));
+    const dropped = parsed.findIndex((s) => /drop column if exists opened_at/.test(s));
+    assert.ok(created >= 0 && dropped > created, 'the log must be in place before the drop');
   });
 
   test('has no semicolon inside a literal, which the naive split would break on', () => {

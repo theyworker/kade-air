@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { preload } from 'react-dom';
 import type { Dish } from '@/lib/dishes';
 import { DESKTOP_GEOMETRY, STATUS_TEXT } from '@/lib/flight';
@@ -14,15 +14,18 @@ type Props = {
   dish: Dish;
   onExit?: () => void;
   onLoop: () => void;
+  /** Fires once the note is on screen — the message has arrived. Absent for the sender's own preview. */
+  onDelivered?: () => void;
   fastMode?: boolean;
   showTuk?: boolean;
 };
 
 const STEP_LABELS = ['Accepted', 'Preparing', 'Dispatched', 'Delivered'];
 
-export default function TrackScreenD({ dish, onExit, onLoop, fastMode = false, showTuk = true }: Props) {
+export default function TrackScreenD({ dish, onExit, onLoop, onDelivered, fastMode = false, showTuk = true }: Props) {
   const d = useDelivery(fastMode, DESKTOP_GEOMETRY, true);
   const { phase, world } = d;
+  const delivered = useRef(false);
 
   // Desktop has no reveal card of its own — the end card is the reveal. Warm
   // the big art here so it paints the instant the flight hands over.
@@ -31,11 +34,22 @@ export default function TrackScreenD({ dish, onExit, onLoop, fastMode = false, s
 
   // Confetti lands, then the scene gives way to the end card (design: +1600ms
   // after delivery, which is 900ms past the `revealed` beat at +700ms).
+  //
+  // Desktop has no reveal card of its own — that end card carries the note, so
+  // the hand-off below is the message arriving, and onDelivered goes with it
+  // rather than with the earlier `revealed` beat. Once per flight: a replay
+  // remounts this screen with a fresh key and reports again.
   useEffect(() => {
     if (!d.revealed) return;
-    const id = setTimeout(onLoop, 900);
+    const id = setTimeout(() => {
+      if (!delivered.current) {
+        delivered.current = true;
+        onDelivered?.();
+      }
+      onLoop();
+    }, 900);
     return () => clearTimeout(id);
-  }, [d.revealed, onLoop]);
+  }, [d.revealed, onLoop, onDelivered]);
 
   return (
     <div style={{ position: 'relative', height: '100vh', overflow: 'hidden', background: '#8ed0f7' }}>

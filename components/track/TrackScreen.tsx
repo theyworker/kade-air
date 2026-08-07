@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { preload } from 'react-dom';
 import type { Dish } from '@/lib/dishes';
 import { STATUS_TEXT } from '@/lib/flight';
@@ -17,15 +18,27 @@ type Props = {
   msgDisplay: string;
   onExit?: () => void; // back button; hidden when absent
   onLoop: () => void;
+  /** Fires once the note is on screen — the message has arrived. Absent for the sender's own preview. */
+  onDelivered?: () => void;
   fastMode?: boolean;
   showTuk?: boolean;
 };
 
 const STEP_LABELS = ['Accepted', 'Preparing', 'Dispatched', 'Delivered'];
 
-export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msgDisplay, onExit, onLoop, fastMode = false, showTuk = true }: Props) {
+export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msgDisplay, onExit, onLoop, onDelivered, fastMode = false, showTuk = true }: Props) {
   const d = useDelivery(fastMode);
   const { phase, world } = d;
+  const delivered = useRef(false);
+
+  // The reveal card is the message being delivered — before this beat the note
+  // has not been read by anyone. Once per flight: this screen is remounted with
+  // a fresh key to replay, so a replay is a new flight and reports again.
+  useEffect(() => {
+    if (!d.revealed || delivered.current) return;
+    delivered.current = true;
+    onDelivered?.();
+  }, [d.revealed, onDelivered]);
 
   // The reveal is a 1254px PNG. preload() starts the download as early as
   // possible; useWarmImage also decodes it, so the final pop paints with no

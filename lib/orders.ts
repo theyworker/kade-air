@@ -1,5 +1,5 @@
 import { generateCode } from './code';
-import { DuplicateCodeError, neonStore, type OrderStore } from './db';
+import { DuplicateCodeError, neonStore, type OrderOpen, type OrderStore } from './db';
 import { redisCache, type OrderCache } from './cache';
 import { sanitizeOrder, type Order } from './order';
 import { sanitizePlace, type Place } from './place';
@@ -86,25 +86,33 @@ export async function getOrder(code: string, deps: Deps = defaults()): Promise<O
 }
 
 /**
- * Records that the recipient opened the delivery: when, and where they
- * appeared to be.
+ * Logs one opening of a delivery: when the message reached someone, and where
+ * they appeared to be.
  *
- * Only the first open is kept — the store's update is written so later opens
- * match nothing — because the question this answers is when the delivery
- * landed, not how many times it has been replayed since.
+ * Every opening is kept, not just the first. A recipient who watches it again,
+ * or shows it to someone next to them, has opened it again — that is a real
+ * event and the log has room for it. What "opened" means is decided by the
+ * caller, and it means the message actually arrived: see recordOpenAction.
  *
  * The cache is deliberately left alone. A cached entry holds only what the
  * delivery renders, and none of that changes when an order is opened, so
  * there is nothing here to invalidate.
  *
- * Resolves true when this call was the open that got recorded.
+ * Resolves true when an opening was written. False means there was nothing to
+ * write it against — an unknown code, a revoked order, or an order that has
+ * already logged more openings than anyone needs.
  */
-export async function markOpened(
+export async function recordOpen(
   code: string,
   place: Place,
   deps: Deps = defaults(),
 ): Promise<boolean> {
-  return deps.store.markOpened(code, sanitizePlace(place));
+  return deps.store.recordOpen(code, sanitizePlace(place));
+}
+
+/** Every opening of an order, oldest first. Reads past the cache, which holds none of this. */
+export async function openingsOf(code: string, deps: Deps = defaults()): Promise<OrderOpen[]> {
+  return deps.store.opensOf(code);
 }
 
 /**
