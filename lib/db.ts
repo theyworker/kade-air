@@ -19,8 +19,12 @@ export class DuplicateCodeError extends Error {
   }
 }
 
+// Exported so the admin's read-only reporting queries (lib/stats.ts) share this
+// one lazily-built client rather than opening a second one. Nothing outside
+// this file and lib/stats.ts should reach for it: order reads and writes go
+// through neonStore below, which is the interface the tests can fake.
 let client: ReturnType<typeof neon> | null = null;
-const sql = () => (client ??= neon(env.DATABASE_URL));
+export const sql = () => (client ??= neon(env.DATABASE_URL));
 
 // Postgres unique-violation SQLSTATE.
 const UNIQUE_VIOLATION = '23505';

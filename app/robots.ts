@@ -27,8 +27,11 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         // Next.js internals and the generated OG images carry no standalone
-        // value in an index and only dilute the real pages.
-        disallow: ['/_next/', '/d/*/opengraph-image'],
+        // value in an index and only dilute the real pages. /admin is a login
+        // wall — nothing to crawl, and no reason to advertise it. (It also
+        // sends `noindex`, which is what actually keeps it out of an index;
+        // see the note above.)
+        disallow: ['/_next/', '/d/*/opengraph-image', '/admin'],
       },
     ],
     ...(base ? { sitemap: `${base}/sitemap.xml`, host: base } : {}),

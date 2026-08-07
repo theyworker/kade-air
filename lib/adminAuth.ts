@@ -1,0 +1,137 @@
+// Who may open /admin, and how a logged-in session is proved.
+//
+// Deliberately dependency-free and free of `next/*` imports: everything here is
+// pure string work over an injectable environment, so it can be unit tested
+// without a server, a request, or real passwords. The cookie plumbing that uses
+// it lives in app/admin/session.ts.
+
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
+export type AdminUser = {
+  /** what gets typed into the login form, lowercase */
+  username: string;
+  /** what the dashboard greets them by */
+  name: string;
+  /** the environment variable holding this user's password */
+  passwordEnv: string;
+};
+
+// The roster is hardcoded on purpose — this is a two-person control tower, not
+// a product with sign-ups.
+export const ADMIN_USERS: AdminUser[] = [
+  { username: 'devaka', name: 'Devaka', passwordEnv: 'ADMIN_PASSWORD_DEVAKA' },
+  { username: 'dinuk', name: 'Dinuk', passwordEnv: 'ADMIN_PASSWORD_DINUK' },
+];
+
+/**
+ * The password both users get until the environment says otherwise.
+ *
+ * Read the obvious thing into this: it is written down in a public repository,
+ * so it is public. Anyone who finds a deployment of this app can open the
+ * control tower and read every sender name, recipient name and message in the
+ * database. It exists so the tower opens on a fresh checkout without
+ * configuration — set ADMIN_PASSWORD_DEVAKA and ADMIN_PASSWORD_DINUK on any
+ * deployment that is reachable from outside your laptop. Until you do, the
+ * dashboard says so at the top of the page.
+ */
+export const DEFAULT_PASSWORD = 'kottu2026';
+
+const passwordFor = (user: AdminUser, env: Env): string => env[user.passwordEnv] || DEFAULT_PASSWORD;
+
+export const SESSION_COOKIE = 'kade_admin';
+export const SESSION_TTL_SECONDS = 60 * 60 * 12;
+
+export type Env = Record<string, string | undefined>;
+
+const hex = (key: string, data: string) => createHmac('sha256', key).update(data).digest('hex');
+
+// Compares two hex digests without leaking where they first differ. Digests are
+// fixed-length, so a length mismatch here means the input was not a digest at
+// all (truncated, or not hex) — false, not a throw.
+function sameDigest(a: string, b: string): boolean {
+  const left = Buffer.from(a, 'hex');
+  const right = Buffer.from(b, 'hex');
+  return left.length > 0 && left.length === right.length && timingSafeEqual(left, right);
+}
+
+export function findUser(username: string): AdminUser | null {
+  const wanted = username.trim().toLowerCase();
+  return ADMIN_USERS.find((u) => u.username === wanted) ?? null;
+}
+
+/** True while either account is still reachable with the published default password. */
+export const usingDefaultPassword = (env: Env = process.env): boolean =>
+  ADMIN_USERS.some((u) => passwordFor(u, env) === DEFAULT_PASSWORD);
+
+/**
+ * The key that signs session cookies, derived from the passwords themselves.
+ *
+ * Deriving rather than adding a third secret to configure has a useful
+ * side effect: changing either password changes the key, which invalidates
+ * every outstanding session. That is exactly what you want a password change to
+ * do — including the change off the default, which retires every session that
+ * was opened under it.
+ */
+export function sessionKey(env: Env = process.env): string {
+  // NUL joins the passwords because it cannot appear in one: "ab" + "c" and
+  // "a" + "bc" have to derive different keys.
+  const passwords = ADMIN_USERS.map((u) => passwordFor(u, env)).join('\u0000');
+  return hex('kade-air/admin-session/v1', passwords);
+}
+
+/**
+ * Checks a login. Returns the user on success, null on anything else.
+ *
+ * Both comparands are hashed first, so the comparison is over equal-length
+ * digests and its cost does not depend on how much of the password was right.
+ * An unknown username falls through to the same dummy comparison, so it is no
+ * faster to probe than a wrong password.
+ */
+export function verifyCredentials(
+  username: string,
+  password: string,
+  env: Env = process.env,
+): AdminUser | null {
+  const user = findUser(username);
+  const expected = user ? passwordFor(user, env) : '\u0000no-such-user';
+  if (!sameDigest(hex('pw', expected), hex('pw', password)) || !user) return null;
+  return user;
+}
+
+/**
+ * Mints a session token: `<username>.<expiry ms>.<signature>`.
+ *
+ * Stateless by design — there is no session table to keep, and a token is only
+ * good until its own expiry. Returns null for anyone off the roster.
+ */
+export function createSession(
+  username: string,
+  now: number = Date.now(),
+  env: Env = process.env,
+): string | null {
+  if (!findUser(username)) return null;
+  const key = sessionKey(env);
+  const payload = `${username}.${now + SESSION_TTL_SECONDS * 1000}`;
+  return `${payload}.${hex(key, payload)}`;
+}
+
+/** The user a token proves, or null if it is missing, forged, expired or stale. */
+export function readSession(
+  token: string | undefined | null,
+  now: number = Date.now(),
+  env: Env = process.env,
+): AdminUser | null {
+  if (!token) return null;
+  const key = sessionKey(env);
+
+  const cut = token.lastIndexOf('.');
+  if (cut < 0) return null;
+  const payload = token.slice(0, cut);
+  if (!sameDigest(hex(key, payload), token.slice(cut + 1))) return null;
+
+  // Only now is the payload trustworthy enough to read.
+  const [username, expiry] = payload.split('.');
+  const expiresAt = Number(expiry);
+  if (!Number.isFinite(expiresAt) || expiresAt <= now) return null;
+  return findUser(username);
+}
