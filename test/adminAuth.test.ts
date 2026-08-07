@@ -2,12 +2,12 @@ import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ADMIN_USERS,
+  DEFAULT_PASSWORD,
   SESSION_TTL_SECONDS,
   createSession,
   findUser,
-  isConfigured,
   readSession,
-  sessionKey,
+  usingDefaultPassword,
   verifyCredentials,
   type Env,
 } from '../lib/adminAuth';
@@ -48,18 +48,26 @@ describe('verifyCredentials', () => {
     assert.equal(verifyCredentials('dinesh', 'kottu-please', env), null);
   });
 
-  // The dangerous shape of a "password is optional" bug: no password set, and
-  // an empty (or any) submission sails through.
-  test('rejects everything when the passwords are unconfigured', () => {
+  // The dangerous shape of a "password is optional" bug: nothing configured,
+  // and an empty submission sails through on the falsy check.
+  test('an unset password falls back to the default, not to nothing', () => {
     assert.equal(verifyCredentials('devaka', '', {}), null);
     assert.equal(verifyCredentials('devaka', 'anything', {}), null);
-    assert.equal(verifyCredentials('devaka', 'kottu-please', { ADMIN_PASSWORD_DEVAKA: '' }), null);
+    assert.equal(verifyCredentials('devaka', DEFAULT_PASSWORD, {})?.name, 'Devaka');
+    // An empty string in the environment is unset, not a blank password.
+    assert.equal(verifyCredentials('devaka', '', { ADMIN_PASSWORD_DEVAKA: '' }), null);
+    assert.equal(verifyCredentials('devaka', DEFAULT_PASSWORD, { ADMIN_PASSWORD_DEVAKA: '' })?.name, 'Devaka');
   });
 
-  test('isConfigured needs both passwords, not one', () => {
-    assert.equal(isConfigured(env), true);
-    assert.equal(isConfigured({ ADMIN_PASSWORD_DEVAKA: 'kottu-please' }), false);
-    assert.equal(isConfigured({}), false);
+  test('a configured password replaces the default rather than joining it', () => {
+    assert.equal(verifyCredentials('devaka', DEFAULT_PASSWORD, env), null);
+    assert.equal(verifyCredentials('devaka', 'kottu-please', env)?.name, 'Devaka');
+  });
+
+  test('the default-password warning tracks each account separately', () => {
+    assert.equal(usingDefaultPassword({}), true);
+    assert.equal(usingDefaultPassword({ ADMIN_PASSWORD_DEVAKA: 'kottu-please' }), true);
+    assert.equal(usingDefaultPassword(env), false);
   });
 });
 
@@ -102,10 +110,10 @@ describe('sessions', () => {
     assert.equal(readSession(token, NOW + 1000, rotated), null);
   });
 
-  test('unconfigured means no key, no minting, and no valid tokens', () => {
-    assert.equal(sessionKey({}), null);
-    assert.equal(createSession('devaka', NOW, {}), null);
-    assert.equal(readSession(createSession('devaka', NOW, env), NOW, {}), null);
+  test('a token minted under the default dies when real passwords arrive', () => {
+    const onDefault = createSession('devaka', NOW, {});
+    assert.ok(readSession(onDefault, NOW + 1000, {}));
+    assert.equal(readSession(onDefault, NOW + 1000, env), null);
   });
 
   test('will not mint a token for someone off the roster', () => {

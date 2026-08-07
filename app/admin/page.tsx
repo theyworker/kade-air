@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Dashboard from '@/components/admin/Dashboard';
 import LoginCard from '@/components/admin/LoginCard';
+import { usingDefaultPassword } from '@/lib/adminAuth';
 import { getDailyOrders, getOrdersPage, getTopDishes, getTotals } from '@/lib/stats';
 import { currentAdmin } from './session';
 
@@ -30,6 +31,13 @@ export default async function AdminPage() {
   ]);
 
   return (
-    <Dashboard name={admin.name} totals={totals} daily={daily} dishes={dishes} orders={orders} />
+    <Dashboard
+      name={admin.name}
+      totals={totals}
+      daily={daily}
+      dishes={dishes}
+      orders={orders}
+      defaultPassword={usingDefaultPassword()}
+    />
   );
 }

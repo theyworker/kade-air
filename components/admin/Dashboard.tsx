@@ -12,6 +12,8 @@ type Props = {
   daily: DayPoint[];
   dishes: DishCount[];
   orders: OrderPage;
+  /** true while the published default password still opens this dashboard */
+  defaultPassword: boolean;
 };
 
 function Tile({ caption, value, note }: { caption: string; value: number; note: string }) {
@@ -29,7 +31,7 @@ function Tile({ caption, value, note }: { caption: string; value: number; note: 
   );
 }
 
-export default function Dashboard({ name, totals, daily, dishes, orders }: Props) {
+export default function Dashboard({ name, totals, daily, dishes, orders, defaultPassword }: Props) {
   const [top, ...rest] = dishes;
   const topDish = top ? findDish(top.dishId) : null;
   // Bars are scaled against the most popular dish, not the total, so the
@@ -67,6 +69,31 @@ export default function Dashboard({ name, totals, daily, dishes, orders }: Props
             </button>
           </form>
         </header>
+
+        {defaultPassword && (
+          // Deliberately loud and deliberately not dismissible: every name and
+          // message below is readable by anyone who knows the default.
+          <div
+            role="alert"
+            style={{
+              ...card,
+              background: '#fff6f4',
+              borderColor: '#d93a2b',
+              boxShadow: '0 5px 0 #d93a2b',
+              padding: '14px 18px',
+              marginBottom: 16,
+            }}
+          >
+            <div className="fredoka" style={{ fontWeight: 700, fontSize: 16, color: '#d93a2b' }}>
+              Still on the default password
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: INK, marginTop: 4 }}>
+              It is written down in the public repo, so anyone can read this page. Set
+              ADMIN_PASSWORD_DEVAKA and ADMIN_PASSWORD_DINUK in the deployment&apos;s environment —
+              that also signs out every session opened with the default.
+            </div>
+          </div>
+        )}
 
         <div
           style={{

@@ -23,9 +23,11 @@ export async function currentAdmin(): Promise<AdminUser | null> {
   return readSession(jar.get(SESSION_COOKIE)?.value);
 }
 
-export async function startSession(username: string): Promise<boolean> {
+export async function startSession(username: string): Promise<void> {
   const token = createSession(username);
-  if (!token) return false;
+  // Only ever null for a username off the roster, which cannot reach here — the
+  // caller has already checked the password against a real user.
+  if (!token) return;
 
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -36,7 +38,6 @@ export async function startSession(username: string): Promise<boolean> {
     path: '/',
     maxAge: SESSION_TTL_SECONDS,
   });
-  return true;
 }
 
 export async function endSession(): Promise<void> {

@@ -2,7 +2,7 @@
 
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { isConfigured, verifyCredentials } from '@/lib/adminAuth';
+import { verifyCredentials } from '@/lib/adminAuth';
 import { adminLoginLimiter, clientIp } from '@/lib/ratelimit';
 import { getOrdersPage, type OrderPage } from '@/lib/stats';
 import { currentAdmin, endSession, startSession } from './session';
@@ -18,10 +18,6 @@ export async function loginAction(_prev: LoginState, form: FormData): Promise<Lo
   const username = String(form.get('username') ?? '');
   const password = String(form.get('password') ?? '');
 
-  if (!isConfigured()) {
-    return { error: 'Admin access is not configured on this deployment.' };
-  }
-
   try {
     const { success } = await adminLoginLimiter().limit(clientIp(await headers()));
     if (!success) return { error: 'Too many attempts. Try again in a few minutes.' };
@@ -34,9 +30,7 @@ export async function loginAction(_prev: LoginState, form: FormData): Promise<Lo
   const user = verifyCredentials(username, password);
   if (!user) return { error: "That's not it. Try again." };
 
-  if (!(await startSession(user.username))) {
-    return { error: 'Admin access is not configured on this deployment.' };
-  }
+  await startSession(user.username);
 
   // Throws, by design — control never returns to the form.
   redirect('/admin');
