@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { preload } from 'react-dom';
 import type { Dish } from '@/lib/dishes';
 import { DESKTOP_GEOMETRY, STATUS_TEXT } from '@/lib/flight';
@@ -8,6 +8,7 @@ import { useDelivery } from '@/lib/useDelivery';
 import { useWarmImage } from '@/lib/useWarmImage';
 import SpeakerIcon from '../SpeakerIcon';
 import KitchenD from './KitchenD';
+import LiveCamD from './LiveCamD';
 import SkylineD from './SkylineD';
 
 type Props = {
@@ -23,6 +24,7 @@ const STEP_LABELS = ['Accepted', 'Preparing', 'Dispatched', 'Delivered'];
 export default function TrackScreenD({ dish, onExit, onLoop, fastMode = false, showTuk = true }: Props) {
   const d = useDelivery(fastMode, DESKTOP_GEOMETRY, true);
   const { phase, world } = d;
+  const [camFinished, setCamFinished] = useState(false);
 
   // Desktop has no reveal card of its own — the end card is the reveal. Warm
   // the big art here so it paints the instant the flight hands over.
@@ -161,6 +163,10 @@ export default function TrackScreenD({ dish, onExit, onLoop, fastMode = false, s
         ))}
       </div>
 
+      {/* live cam. The clip is shorter than the flight, so it runs out
+          mid-descent and the window retires itself. */}
+      {!d.revealed && !camFinished && phase !== 'delivered' && <LiveCamD onEnded={() => setCamFinished(true)} />}
+
       {/* top overlay: back / mute */}
       {onExit && (
         <div onClick={onExit} className="press back-btn" style={{ position: 'absolute', top: 24, left: 24, zIndex: 50, width: 44, height: 44, borderRadius: 14, fontSize: 20 }}>
@@ -242,7 +248,12 @@ export default function TrackScreenD({ dish, onExit, onLoop, fastMode = false, s
           transform: 'translateX(-50%)',
           bottom: 28,
           zIndex: 31,
-          width: 'min(640px,90vw)',
+          // The design draws this at 640px on a canvas wide enough that the
+          // live cam clears it. Centred at 640, the card's left edge only
+          // passes the cam's right edge (232px) at a 1120px viewport, so from
+          // 1024 to there the cam would sit over the start of the status
+          // sentence. The third term keeps an 8px gutter instead.
+          width: 'min(640px, 90vw, calc(100vw - 480px))',
           background: '#fff',
           border: '3px solid #372a54',
           borderRadius: 26,
