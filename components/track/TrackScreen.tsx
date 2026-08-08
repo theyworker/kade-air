@@ -203,9 +203,9 @@ export default function TrackScreen({ dish, senderDisplay, recipientDisplay, msg
         })}
       </div>
 
-      {/* live cam: hold to peek at the feed. The clip is shorter than the
-          flight, so it runs out mid-descent and the widget retires itself. */}
-      {!d.revealed && !camFinished && phase !== 'delivered' && <LiveCam airborne={d.airborne} onEnded={() => setCamFinished(true)} />}
+      {/* live cam. The clip is shorter than the flight, so it runs out
+          mid-descent and the window retires itself. */}
+      {!d.revealed && !camFinished && phase !== 'delivered' && <LiveCam onEnded={() => setCamFinished(true)} />}
 
       {/* full-screen reveal: the food slowly zooms while the note is read */}
       {d.revealed ? (
